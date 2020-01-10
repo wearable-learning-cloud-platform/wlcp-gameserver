@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: wlcp-api
+  datasource:
+    url: jdbc:mysql://wlcp-api-db:3306/wlcp-api
+    username: wlcp
+    password: wlcp
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
+    hibernate:
+      ddl-auto: update
+server:
+  port: 8082
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://wlcp-discovery:8761/eureka/

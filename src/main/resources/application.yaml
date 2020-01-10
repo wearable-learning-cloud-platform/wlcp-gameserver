@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: wlcp-gameserver
+server:
+  port: 3333
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    hostname: docker-host
