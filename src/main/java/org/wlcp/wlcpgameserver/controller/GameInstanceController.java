@@ -16,15 +16,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.wlcp.wlcpgameserver.datamodel.master.GameInstance;
 import org.wlcp.wlcpgameserver.dto.GameDto;
 import org.wlcp.wlcpgameserver.dto.StartGameInstanceDto;
+import org.wlcp.wlcpgameserver.dto.StopGameInstanceDto;
 import org.wlcp.wlcpgameserver.dto.UsernameDto;
 import org.wlcp.wlcpgameserver.dto.messages.ConnectRequestMessage;
 import org.wlcp.wlcpgameserver.dto.messages.DisconnectResponseMessage;
 import org.wlcp.wlcpgameserver.dto.messages.IMessage;
 import org.wlcp.wlcpgameserver.dto.messages.PlayerAvaliableMessage;
-import org.wlcp.wlcpgameserver.feignclients.GameFeignClient;
-import org.wlcp.wlcpgameserver.feignclients.UsernameFeignClient;
+import org.wlcp.wlcpgameserver.feignclient.GameFeignClient;
+import org.wlcp.wlcpgameserver.feignclient.UsernameFeignClient;
+import org.wlcp.wlcpgameserver.repository.GameInstanceRepository;
 import org.wlcp.wlcpgameserver.service.impl.GameInstanceService;
 
 @Controller
@@ -41,30 +44,19 @@ public class GameInstanceController {
 	private UsernameFeignClient usernameFeignClient;
 	
 	@Autowired
+	private GameInstanceRepository gameInstanceRepository;
+	
+	@Autowired
 	private SimpMessagingTemplate messageTemplate;
 	
 	public CopyOnWriteArrayList<GameInstanceService> gameInstances = new CopyOnWriteArrayList<GameInstanceService>();
 	
-//	@GetMapping(value="/startGameInstance/{gameId}/{usernameId}")
-//	public ResponseEntity<String> startGameInstance(@PathVariable String gameId, @PathVariable String usernameId) {
-//		if(gameRepository.existsById(gameId) && usernameRepository.existsById(usernameId)) {
-//			GameInstanceService service = context.getBean(GameInstanceService.class);
-//			service.setupVariables(gameRepository.getOne(gameId), usernameRepository.getOne(usernameId), false);
-//			service.start();
-//			gameInstances.add(service);
-//			return ResponseEntity.status(HttpStatus.OK).body("");
-//		} else {
-//			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("The game " + gameId + " username " + usernameId + " does not exist, so an insance could not be started!");
-//		}
-//	}
-	
-	@GetMapping(value="/test")
-	public void test() {
-		GameDto game = gameFeignClient.getGame("private");
-		game.toString();
+	@GetMapping("/gameInstances")
+	public ResponseEntity<List<GameInstance>> getGameInstances() {
+		return new ResponseEntity<List<GameInstance>>(gameInstanceRepository.findAll(), HttpStatus.OK);
 	}
 	
-	@PostMapping(value="/startGameInstance")
+	@PostMapping("/startGameInstance")
 	public ResponseEntity<String> startGameInstance(@RequestBody StartGameInstanceDto startGameInstanceDto) {
 		GameDto gameDto = gameFeignClient.getGame(startGameInstanceDto.gameId);
 		UsernameDto usernameDto = usernameFeignClient.getUsername(startGameInstanceDto.usernameId);
@@ -76,6 +68,22 @@ public class GameInstanceController {
 			return ResponseEntity.status(HttpStatus.OK).body("");
 		} else {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("The game " + startGameInstanceDto.gameId + " username " + startGameInstanceDto.usernameId + " does not exist, so an insance could not be started!");
+		}
+	}
+	
+	@PostMapping("/stopGameInstance")
+	public ResponseEntity<String> stopGameInstance(@RequestBody StopGameInstanceDto stopGameInstanceDto) {
+		if(gameInstanceRepository.existsById(stopGameInstanceDto.gameInstanceId)) {
+			for(GameInstanceService instance : gameInstances) {
+				if(instance.getGameInstance().getGameInstanceId().equals(stopGameInstanceDto.gameInstanceId)) {
+					instance.shutdown();
+					gameInstances.remove(instance);
+					break;
+				}
+			}
+			return ResponseEntity.status(HttpStatus.OK).body("");
+		} else {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("The game instance: " + stopGameInstanceDto.gameInstanceId + " does not exist, so it could not be stopped!");
 		}
 	}
 	

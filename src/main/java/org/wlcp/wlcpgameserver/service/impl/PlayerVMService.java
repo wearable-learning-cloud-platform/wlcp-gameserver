@@ -1,7 +1,5 @@
 package org.wlcp.wlcpgameserver.service.impl;
 
-import java.io.FileReader;
-
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -34,7 +32,7 @@ public class PlayerVMService extends Thread {
 	
 	private GameInstanceService gameInstanceService;
 	private Player player;
-	private FileReader fileReader;
+	private String transpiledGame;
 	private ScriptEngine scriptEngine;
 	private boolean block = true;
 	private boolean reconnect = false;
@@ -42,10 +40,10 @@ public class PlayerVMService extends Thread {
 	private IMessage blockMessage = null;
 	private IMessage lastSentPacket = null;
 	
-	public void setupVariables(GameInstanceService gameInstanceService, Player player, FileReader fileReader) {
+	public void setupVariables(GameInstanceService gameInstanceService, Player player, String transpiledGame) {
 		this.gameInstanceService = gameInstanceService;
 		this.player = player;
-		this.fileReader = fileReader;
+		this.transpiledGame = transpiledGame;
 		logger.info("PlayerVM for username :" + player.usernameClientData.username.usernameId + " started on game instance: " + gameInstanceService.getGameInstance().getGameInstanceId());
 		this.setName("WLCP-" + gameInstanceService.getGame().gameId + "-" + gameInstanceService.getGameInstance().getGameInstanceId() + "-" + player.usernameClientData.username.usernameId + "T" + player.teamPlayer.team + "P" + player.teamPlayer.player);
 	}
@@ -65,7 +63,7 @@ public class PlayerVMService extends Thread {
 	
 	private void startVM() throws ScriptException, NoSuchMethodException {
 		scriptEngine = new ScriptEngineManager().getEngineByName("nashorn");
-		scriptEngine.eval(fileReader);
+		scriptEngine.eval(transpiledGame);
 		scriptEngine.eval("FSMGame.gameInstanceId = " + gameInstanceService.getGameInstance().getGameInstanceId() + ";");
 		Object json = scriptEngine.get("FSMGame");
 		Invocable invocable = (Invocable) scriptEngine;

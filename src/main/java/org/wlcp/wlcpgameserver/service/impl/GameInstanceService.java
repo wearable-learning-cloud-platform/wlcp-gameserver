@@ -1,7 +1,5 @@
 package org.wlcp.wlcpgameserver.service.impl;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -22,7 +20,8 @@ import org.wlcp.wlcpgameserver.dto.messages.ConnectResponseMessage;
 import org.wlcp.wlcpgameserver.dto.messages.ConnectResponseMessage.Code;
 import org.wlcp.wlcpgameserver.dto.messages.IMessage;
 import org.wlcp.wlcpgameserver.dto.messages.PlayerAvaliableMessage;
-import org.wlcp.wlcpgameserver.feignclients.UsernameFeignClient;
+import org.wlcp.wlcpgameserver.feignclient.TranspilerFeignClient;
+import org.wlcp.wlcpgameserver.feignclient.UsernameFeignClient;
 import org.wlcp.wlcpgameserver.model.Player;
 import org.wlcp.wlcpgameserver.model.TeamPlayer;
 import org.wlcp.wlcpgameserver.model.UsernameClientData;
@@ -42,6 +41,9 @@ public class GameInstanceService extends Thread {
 	private UsernameFeignClient usernameFeignClient;
 	
 	@Autowired
+	private TranspilerFeignClient transpilerFeignClient;
+	
+	@Autowired
 	private GameInstanceController gameInstanceController;
 	
 	@Autowired
@@ -51,6 +53,8 @@ public class GameInstanceService extends Thread {
 	private UsernameDto username;
 	private GameInstance gameInstance;
 	private boolean debugInstance;
+	
+	private String transpiledGame;
 	
 	private CopyOnWriteArrayList<IMessage> messages = new CopyOnWriteArrayList<IMessage>();
 	private CopyOnWriteArrayList<Player> players = new CopyOnWriteArrayList<Player>();
@@ -87,6 +91,7 @@ public class GameInstanceService extends Thread {
 		if(!gameInstance.isDebugInstance()) { logger.info("Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId); }
 		if(gameInstance.isDebugInstance()) { logger.info("Debug Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId); }
 		this.setName("WLCP-" + game.gameId + "-" + gameInstance.getGameInstanceId());
+		transpiledGame = transpilerFeignClient.transpileGame(game.gameId);
 	}
 	
 	public ConnectResponseMessage userConnect(ConnectRequestMessage connect) {
@@ -163,22 +168,11 @@ public class GameInstanceService extends Thread {
 	
 	private PlayerVMService StartPlayerVM(Player player) {
 		
-		FileReader fileReader = null;
+		PlayerVMService service = context.getBean(PlayerVMService.class);
+		service.setupVariables(this, player, transpiledGame);
+		service.start();
 		
-		//Get the filename of script for the game
-		try {
-			fileReader = new FileReader("programs/" + game.gameId + ".js");
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-//		PlayerVMService service = context.getBean(PlayerVMService.class);
-//		service.setupVariables(this, player, fileReader);
-//		service.start();
-//		
-//		return service;
-		return null;
+		return service;
 	}
 		
 	public List<PlayerAvaliableMessage> getTeamsAndPlayers(String usernameId) {
