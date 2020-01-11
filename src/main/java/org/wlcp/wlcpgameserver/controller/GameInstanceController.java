@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.wlcp.wlcpgameserver.datamodel.master.GameInstance;
 import org.wlcp.wlcpgameserver.dto.GameDto;
+import org.wlcp.wlcpgameserver.dto.StartDebugGameInstanceDto;
 import org.wlcp.wlcpgameserver.dto.StartGameInstanceDto;
 import org.wlcp.wlcpgameserver.dto.StopGameInstanceDto;
 import org.wlcp.wlcpgameserver.dto.UsernameDto;
@@ -71,6 +72,47 @@ public class GameInstanceController {
 		}
 	}
 	
+	@PostMapping("/startDebugGameInstance")
+	public ResponseEntity<Integer> startDebugGameInstance(@RequestBody StartDebugGameInstanceDto startDebugGameInstance) throws InterruptedException {
+		GameDto gameDto = gameFeignClient.getGame(startDebugGameInstance.gameId);
+		UsernameDto usernameDto = usernameFeignClient.getUsername(startDebugGameInstance.usernameId);
+		if(gameDto != null && usernameDto != null) {
+			List<GameInstance> foundGameInstances = null;
+			if(startDebugGameInstance.restart == false) {
+				if((foundGameInstances = gameInstanceRepository.findByUsernameIdAndDebugInstance(usernameDto.usernameId, true)).size() > 0) {
+					for(GameInstanceService instance : gameInstances) {
+						if(instance.getGameInstance().getGameInstanceId().equals(foundGameInstances.get(0).getGameInstanceId())) {
+							return ResponseEntity.status(HttpStatus.OK).body(instance.getGameInstance().getGameInstanceId());
+						}
+					}
+				}
+			}
+			if((foundGameInstances = gameInstanceRepository.findByUsernameIdAndDebugInstance(usernameDto.usernameId, true)).size() > 0) {
+				for(GameInstanceService instance : gameInstances) {
+					if(instance.getGameInstance().getGameInstanceId().equals(foundGameInstances.get(0).getGameInstanceId())) {
+						instance.shutdown();
+						gameInstances.remove(instance);
+						break;
+					}
+				}
+				GameInstanceService service = context.getBean(GameInstanceService.class);
+				service.setupVariables(gameDto, usernameDto, true);
+				service.start();
+				gameInstances.add(service);
+				Thread.sleep(500); //This really should not be done, but were gonna go with it
+				return ResponseEntity.status(HttpStatus.OK).body(service.getGameInstance().getGameInstanceId());
+			} else {
+				GameInstanceService service = context.getBean(GameInstanceService.class);
+				service.setupVariables(gameDto, usernameDto, true);
+				service.start();
+				gameInstances.add(service);
+				Thread.sleep(500); //This really should not be done, but were gonna go with it
+				return ResponseEntity.status(HttpStatus.OK).body(service.getGameInstance().getGameInstanceId());
+			}
+		}
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(-1);
+	}
+	
 	@PostMapping("/stopGameInstance")
 	public ResponseEntity<String> stopGameInstance(@RequestBody StopGameInstanceDto stopGameInstanceDto) {
 		if(gameInstanceRepository.existsById(stopGameInstanceDto.gameInstanceId)) {
@@ -97,6 +139,19 @@ public class GameInstanceController {
 			}
 		}
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+	}
+	
+	@GetMapping("/checkDebugInstanceRunning/{usernameId}")
+	public ResponseEntity<Boolean> checkDebugInstanceRunning(@PathVariable String usernameId)  {
+		UsernameDto usernameDto = usernameFeignClient.getUsername(usernameId);
+		if(usernameDto != null) {
+			if(gameInstanceRepository.findByUsernameIdAndDebugInstance(usernameDto.usernameId, true).size() > 0) {
+				return ResponseEntity.status(HttpStatus.OK).body(true);
+			}
+			return ResponseEntity.status(HttpStatus.OK).body(false);
+		} else {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(false);
+		}
 	}
 	
 	@MessageMapping("/gameInstance/{gameInstanceId}/connectToGameInstance/{usernameId}/{team}/{player}")
