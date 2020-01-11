@@ -1,16 +1,8 @@
 spring:
   application:
-    name: wlcp-api
-  datasource:
-    url: jdbc:mysql://wlcp-api-db:3306/wlcp-api
-    username: wlcp
-    password: wlcp
-  jpa:
-    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
-    hibernate:
-      ddl-auto: update
+    name: wlcp-gameserver
 server:
-  port: 8082
+  port: 3333
 eureka:
   client:
     serviceUrl:

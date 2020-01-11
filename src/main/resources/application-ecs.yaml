@@ -1,17 +1,8 @@
 spring:
   application:
-    name: wlcp-api
-  datasource:
-    url: jdbc:h2:file:~/test
-    username: sa
-    password: 
-    driver-class-name: org.h2.Driver
-  jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
-      ddl-auto: update
+    name: wlcp-gameserver
 server:
-   port: 8082
+   port: 3333
 eureka:
    client:
     serviceUrl:
