@@ -131,7 +131,7 @@ public class GameInstanceService extends Thread {
 		}
 		
 		//They passed our tests, they can join
-		UsernameClientData usernameClientData = new UsernameClientData(username);
+		UsernameClientData usernameClientData = new UsernameClientData(usernameDto);
 		
 		//Get the team palyer
 		TeamPlayer teamPlayer = new TeamPlayer(connect.team, connect.player);
