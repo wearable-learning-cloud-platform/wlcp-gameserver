@@ -9,3 +9,5 @@ eureka:
       defaultZone: http://wlcp-discovery.local:8761/eureka/
    instance:    prefer-ip-address: true
     ip-address: ${ECS_INSTANCE_IP_ADDRESS}
+wlcp-api-url:
+wlcp-transpiler-url:

@@ -7,3 +7,5 @@ eureka:
   client:
     serviceUrl:
       defaultZone: http://wlcp-discovery:8761/eureka/
+wlcp-api-url:
+wlcp-transpiler-url:
