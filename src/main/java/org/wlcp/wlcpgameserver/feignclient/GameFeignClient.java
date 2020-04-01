@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.wlcp.wlcpgameserver.dto.GameDto;
 
-@FeignClient(contextId="game-client", name="wlcp-api")
+@FeignClient(contextId="game-client", name="wlcp-api", url="${wlcp-api-url:}")
 public interface GameFeignClient {
 	
     @RequestMapping(method=RequestMethod.GET, value="/gameController/getGame/{gameId}")
