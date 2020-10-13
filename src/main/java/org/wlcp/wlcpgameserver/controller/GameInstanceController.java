@@ -66,7 +66,7 @@ public class GameInstanceController {
 			service.setupVariables(gameDto, usernameDto, false);
 			service.start();
 			gameInstances.add(service);
-			return ResponseEntity.status(HttpStatus.OK).body("");
+			return ResponseEntity.status(HttpStatus.OK).body("{}");
 		} else {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("The game " + startGameInstanceDto.gameId + " username " + startGameInstanceDto.usernameId + " does not exist, so an insance could not be started!");
 		}
@@ -123,7 +123,7 @@ public class GameInstanceController {
 					break;
 				}
 			}
-			return ResponseEntity.status(HttpStatus.OK).body("");
+			return ResponseEntity.status(HttpStatus.OK).body("{}");
 		} else {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("The game instance: " + stopGameInstanceDto.gameInstanceId + " does not exist, so it could not be stopped!");
 		}
