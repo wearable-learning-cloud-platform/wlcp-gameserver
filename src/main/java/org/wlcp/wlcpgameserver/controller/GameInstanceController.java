@@ -29,6 +29,7 @@ import org.wlcp.wlcpgameserver.dto.messages.PlayerAvaliableMessage;
 import org.wlcp.wlcpgameserver.feignclient.GameFeignClient;
 import org.wlcp.wlcpgameserver.feignclient.UsernameFeignClient;
 import org.wlcp.wlcpgameserver.repository.GameInstanceRepository;
+import org.wlcp.wlcpgameserver.security.SecurityConstants;
 import org.wlcp.wlcpgameserver.service.impl.GameInstanceService;
 
 @Controller
@@ -59,8 +60,8 @@ public class GameInstanceController {
 	
 	@PostMapping("/startGameInstance")
 	public ResponseEntity<String> startGameInstance(@RequestBody StartGameInstanceDto startGameInstanceDto) {
-		GameDto gameDto = gameFeignClient.getGame(startGameInstanceDto.gameId);
-		UsernameDto usernameDto = usernameFeignClient.getUsername(startGameInstanceDto.usernameId);
+		GameDto gameDto = gameFeignClient.getGame(startGameInstanceDto.gameId, SecurityConstants.JWT_TOKEN);
+		UsernameDto usernameDto = usernameFeignClient.getUsername(startGameInstanceDto.usernameId, SecurityConstants.JWT_TOKEN);
 		if(gameDto != null && usernameDto != null) {
 			GameInstanceService service = context.getBean(GameInstanceService.class);
 			service.setupVariables(gameDto, usernameDto, false);
@@ -74,8 +75,8 @@ public class GameInstanceController {
 	
 	@PostMapping("/startDebugGameInstance")
 	public ResponseEntity<Integer> startDebugGameInstance(@RequestBody StartDebugGameInstanceDto startDebugGameInstance) throws InterruptedException {
-		GameDto gameDto = gameFeignClient.getGame(startDebugGameInstance.gameId);
-		UsernameDto usernameDto = usernameFeignClient.getUsername(startDebugGameInstance.usernameId);
+		GameDto gameDto = gameFeignClient.getGame(startDebugGameInstance.gameId, SecurityConstants.JWT_TOKEN);
+		UsernameDto usernameDto = usernameFeignClient.getUsername(startDebugGameInstance.usernameId, SecurityConstants.JWT_TOKEN);
 		if(gameDto != null && usernameDto != null) {
 			List<GameInstance> foundGameInstances = null;
 			if(startDebugGameInstance.restart == false) {
@@ -131,7 +132,7 @@ public class GameInstanceController {
 	
 	@GetMapping("/playersAvaliable/{gameInstanceId}/{usernameId}")
 	public ResponseEntity<List<PlayerAvaliableMessage>> playersAvailable(@PathVariable int gameInstanceId, @PathVariable String usernameId) {
-		UsernameDto usernameDto = usernameFeignClient.getUsername(usernameId);
+		UsernameDto usernameDto = usernameFeignClient.getUsername(usernameId, SecurityConstants.JWT_TOKEN);
 		if(usernameDto == null) { return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); }
 		for(GameInstanceService gameInstance : gameInstances) {
 			if(gameInstance.getGameInstance().getGameInstanceId().equals(gameInstanceId)) {
@@ -143,7 +144,7 @@ public class GameInstanceController {
 	
 	@GetMapping("/checkDebugInstanceRunning/{usernameId}")
 	public ResponseEntity<Boolean> checkDebugInstanceRunning(@PathVariable String usernameId)  {
-		UsernameDto usernameDto = usernameFeignClient.getUsername(usernameId);
+		UsernameDto usernameDto = usernameFeignClient.getUsername(usernameId, SecurityConstants.JWT_TOKEN);
 		if(usernameDto != null) {
 			if(gameInstanceRepository.findByUsernameIdAndDebugInstance(usernameDto.usernameId, true).size() > 0) {
 				return ResponseEntity.status(HttpStatus.OK).body(true);
