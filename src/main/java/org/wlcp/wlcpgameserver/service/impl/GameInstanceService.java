@@ -32,6 +32,7 @@ import org.wlcp.wlcpgameserver.model.Player;
 import org.wlcp.wlcpgameserver.model.TeamPlayer;
 import org.wlcp.wlcpgameserver.model.UsernameClientData;
 import org.wlcp.wlcpgameserver.repository.GameInstanceRepository;
+import org.wlcp.wlcpgameserver.security.SecurityConstants;
 
 @Controller
 @RequestMapping("/controllers")
@@ -103,7 +104,7 @@ public class GameInstanceService extends Thread {
 	public ConnectResponseMessage userConnect(ConnectRequestMessage connect) {
 		
 		//Get the user from the db
-		UsernameDto usernameDto = usernameFeignClient.getUsername(connect.usernameId);
+		UsernameDto usernameDto = usernameFeignClient.getUsername(connect.usernameId, SecurityConstants.JWT_TOKEN);
 		
 		//Check to make sure the player doesnt already exist in the game (for reconnect)
 		if(!debugInstance) {
