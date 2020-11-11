@@ -15,6 +15,8 @@ import org.wlcp.wlcpgameserver.dto.messages.DisplayPhotoMessage;
 import org.wlcp.wlcpgameserver.dto.messages.DisplayTextMessage;
 import org.wlcp.wlcpgameserver.dto.messages.IMessage;
 import org.wlcp.wlcpgameserver.dto.messages.KeyboardInputMessage;
+import org.wlcp.wlcpgameserver.dto.messages.NoStateMessage;
+import org.wlcp.wlcpgameserver.dto.messages.NoTransitionMessage;
 import org.wlcp.wlcpgameserver.dto.messages.SequenceButtonPressMessage;
 import org.wlcp.wlcpgameserver.dto.messages.SingleButtonPressMessage;
 import org.wlcp.wlcpgameserver.model.Player;
@@ -130,6 +132,11 @@ public class PlayerVMService extends Thread {
 		}
 	}
 	
+	public void NoState() {
+		NoStateMessage msg = new NoStateMessage();
+		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/noState/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+	}
+	
 	public void DisplayText(String text) {
 		DisplayTextMessage msg = new DisplayTextMessage();
 		msg.displayText = text;
@@ -142,6 +149,11 @@ public class PlayerVMService extends Thread {
 		msg.scale = scale;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/displayPhoto/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 		
+	}
+	
+	public void NoTransition() {
+		NoTransitionMessage msg = new NoTransitionMessage();
+		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/noTransition/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 	}
 	
 	public int SingleButtonPress(String[] buttons, int[] transitions) throws ScriptException {
