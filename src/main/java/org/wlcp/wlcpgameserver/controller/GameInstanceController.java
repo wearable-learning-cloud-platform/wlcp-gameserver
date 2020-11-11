@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.wlcp.wlcpgameserver.datamodel.master.GameInstance;
 import org.wlcp.wlcpgameserver.dto.GameDto;
 import org.wlcp.wlcpgameserver.dto.StartDebugGameInstanceDto;
@@ -54,8 +55,8 @@ public class GameInstanceController {
 	public CopyOnWriteArrayList<GameInstanceService> gameInstances = new CopyOnWriteArrayList<GameInstanceService>();
 	
 	@GetMapping("/gameInstances")
-	public ResponseEntity<List<GameInstance>> getGameInstances() {
-		return new ResponseEntity<List<GameInstance>>(gameInstanceRepository.findAll(), HttpStatus.OK);
+	public ResponseEntity<List<GameInstance>> getGameInstances(@RequestParam("usernameId") String usernameId) {
+		return new ResponseEntity<List<GameInstance>>(gameInstanceRepository.findByUsernameIdAndDebugInstance(usernameId, false), HttpStatus.OK);
 	}
 	
 	@PostMapping("/startGameInstance")
