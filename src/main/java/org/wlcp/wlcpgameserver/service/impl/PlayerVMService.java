@@ -18,6 +18,7 @@ import org.wlcp.wlcpgameserver.dto.messages.KeyboardInputMessage;
 import org.wlcp.wlcpgameserver.dto.messages.NoStateMessage;
 import org.wlcp.wlcpgameserver.dto.messages.NoTransitionMessage;
 import org.wlcp.wlcpgameserver.dto.messages.PlaySoundMessage;
+import org.wlcp.wlcpgameserver.dto.messages.PlayVideoMessage;
 import org.wlcp.wlcpgameserver.dto.messages.SequenceButtonPressMessage;
 import org.wlcp.wlcpgameserver.dto.messages.SingleButtonPressMessage;
 import org.wlcp.wlcpgameserver.model.Player;
@@ -156,6 +157,12 @@ public class PlayerVMService extends Thread {
 		PlaySoundMessage msg = new PlaySoundMessage();
 		msg.url = url;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/playSound/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+	}
+	
+	public void PlayVideo(String url) {
+		PlayVideoMessage msg = new PlayVideoMessage();
+		msg.url = url;
+		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/playVideo/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 	}
 	
 	public void NoTransition() {
