@@ -1,6 +1,7 @@
 package org.wlcp.wlcpgameserver.controller;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -154,6 +155,16 @@ public class GameInstanceController {
 		} else {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(false);
 		}
+	}
+	
+	@GetMapping("getPlayerUserMap/{gameInstanceId}")
+	public ResponseEntity<List<Map<String, String>>> getPlayerUserMap(@PathVariable int gameInstanceId) {
+		for(GameInstanceService gameInstance : gameInstances) {
+			if(gameInstance.getGameInstance().getGameInstanceId().equals(gameInstanceId)) {
+				return ResponseEntity.status(HttpStatus.OK).body(gameInstance.getPlayerUserList());
+			}
+		}
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
 	}
 	
 	@MessageMapping("/gameInstance/{gameInstanceId}/connectToGameInstance/{usernameId}/{team}/{player}")

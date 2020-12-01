@@ -1,7 +1,9 @@
 package org.wlcp.wlcpgameserver.service.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.slf4j.Logger;
@@ -226,6 +228,16 @@ public class GameInstanceService extends Thread {
 		gameInstanceRepository.delete(gameInstance);
 		gameInstanceRepository.flush();
 		logger.info("Game Instance: " + gameInstance.getGameInstanceId() + " stopped! No longer playing the game: " + game.gameId);
+	}
+	
+	public List<Map<String,String>> getPlayerUserList() {
+		List<Map<String, String>> playerUserList = new ArrayList<Map<String, String>>();
+		for(Player player : players) {
+			Map<String, String> map = new HashMap<String, String>();
+			map.put("key", "Team " + (player.teamPlayer.team + 1) + " Player " + (player.teamPlayer.player + 1) + " ( " + player.usernameClientData.username.usernameId + " )");
+			playerUserList.add(map);
+		}
+		return playerUserList;
 	}
 	
 	@MessageMapping("/gameInstance/{gameInstanceId}/singleButtonPress/{usernameId}/{team}/{player}")
