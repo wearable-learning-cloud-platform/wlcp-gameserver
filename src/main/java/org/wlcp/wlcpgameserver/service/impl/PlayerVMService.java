@@ -94,12 +94,7 @@ public class PlayerVMService extends Thread {
 			if(reconnect) {
 				unblock(null);
 				reconnect = false;
-				try {
-					scriptEngine.eval("FSMGame.oldState = FSMGame.oldState - 1");
-				} catch (ScriptException e) {
-					e.printStackTrace();
-				}
-				return (int) ((JSObject)scriptEngine.get("FSMGame")).getMember("state");
+				return gotoSameState();
 			}
 			if(shutdown) {
 				return - 3;
@@ -126,9 +121,13 @@ public class PlayerVMService extends Thread {
 		if(block) {
 			reconnect = true;
 		} else {
+			gotoSameState();
 			try {
-				scriptEngine.eval("FSMGame.oldState = FSMGame.oldState - 1");
-			} catch (ScriptException e) {
+				scriptEngine.eval("FSMGame.running = true");
+				Invocable invocable = (Invocable) scriptEngine;
+				invocable.invokeMethod(scriptEngine.get("FSMGame"), "start");
+			} catch (NoSuchMethodException | ScriptException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -233,7 +232,7 @@ public class PlayerVMService extends Thread {
 	
 	private int gotoSameState() {
 		try {
-			scriptEngine.eval("FSMGame.oldState = FSMGame.oldState - 1");
+			scriptEngine.eval("FSMGame.state = FSMGame.oldState");
 		} catch (ScriptException e) {
 			e.printStackTrace();
 		}
