@@ -168,66 +168,73 @@ public class PlayerVMService extends Thread {
 		NoTransitionMessage msg = new NoTransitionMessage();
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/noTransition/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 	}
-	
+
 	public int SingleButtonPress(String[] buttons, int[] transitions) throws ScriptException {
-		block = true;
-		SingleButtonPressMessage msg = new SingleButtonPressMessage();
-		lastSentPacket = msg;
-		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/singleButtonPressRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
-		int state;
-		while((state = block()) == -2) {}
-		if(state != -2 && state != -1) { return state; }
-		msg = (SingleButtonPressMessage) blockMessage;
-		for(int i = 0; i < buttons.length; i++) {
-			if(buttons[i].equals(Integer.toString(msg.buttonPress))) {
-				return transitions[i];
+		while(true) {
+			block = true;
+			SingleButtonPressMessage msg = new SingleButtonPressMessage();
+			lastSentPacket = msg;
+			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/singleButtonPressRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+			int state;
+			while((state = block()) == -2) {}
+			if(state != -2 && state != -1) { return state; }
+			msg = (SingleButtonPressMessage) blockMessage;
+			for(int i = 0; i < buttons.length; i++) {
+				if(buttons[i].equals(Integer.toString(msg.buttonPress))) {
+					return transitions[i];
+				}
 			}
 		}
-		return gotoSameState();
 	}
 	
 	public int SequenceButtonPress(String[] buttons, int[] transitions) {
-		block = true;
-		SequenceButtonPressMessage msg = new SequenceButtonPressMessage();
-		lastSentPacket = msg;
-		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/sequenceButtonPressRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
-		int state;
-		while((state = block()) == -2) {}
-		if(state != -2 && state != -1) { return state; }
-		msg = (SequenceButtonPressMessage) blockMessage;
-		for(int i = 0; i < buttons.length; i++) {
-			if(buttons[i].equals(msg.sequenceButtonPress)) {
-				return transitions[i];
+		while(true) {
+			block = true;
+			SequenceButtonPressMessage msg = new SequenceButtonPressMessage();
+			lastSentPacket = msg;
+			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/sequenceButtonPressRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+			int state;
+			while((state = block()) == -2) {}
+			if(state != -2 && state != -1) { return state; }
+			msg = (SequenceButtonPressMessage) blockMessage;
+			for(int i = 0; i < buttons.length; i++) {
+				if(buttons[i].equals(msg.sequenceButtonPress)) {
+					return transitions[i];
+				}
+			}
+			for(int i = 0; i < buttons.length; i++) {
+				if(buttons[i].equals("")) {
+					return transitions[i];
+				}
 			}
 		}
-		for(int i = 0; i < buttons.length; i++) {
-			if(buttons[i].equals("")) {
-				return transitions[i];
-			}
-		}
-		return gotoSameState();
 	}
 	
 	public int KeyboardInput(String[] keyboardInput, int[] transitions) {
-		block = true;
-		KeyboardInputMessage msg = new KeyboardInputMessage();
-		lastSentPacket = msg;
-		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/keyboardInputRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
-		int state;
-		while((state = block()) == -2) {}
-		if(state != -2 && state != -1) { return state; }
-		msg = (KeyboardInputMessage) blockMessage;
-		for(int i = 0; i < keyboardInput.length; i++) {
-			if(keyboardInput[i].equals(msg.keyboardInput)) {
-				return transitions[i];
+		while(true) {
+			block = true;
+			KeyboardInputMessage msg = new KeyboardInputMessage();
+			lastSentPacket = msg;
+			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/keyboardInputRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+			int state;
+			while((state = block()) == -2) {}
+			if(state != -2 && state != -1) { return state; }
+			msg = (KeyboardInputMessage) blockMessage;
+			for(int i = 0; i < keyboardInput.length; i++) {
+				if(keyboardInput[i].equals(msg.keyboardInput)) {
+					return transitions[i];
+				}
+			}
+			for(int i = 0; i < keyboardInput.length; i++) {
+				if(keyboardInput[i].equals("")) {
+					return transitions[i];
+				}
 			}
 		}
-		for(int i = 0; i < keyboardInput.length; i++) {
-			if(keyboardInput[i].equals("")) {
-				return transitions[i];
-			}
-		}
-		return gotoSameState();
+	}
+	
+	public Object getGlobalVariable(String variableName) throws ScriptException {
+		return scriptEngine.eval("FSMGame." + variableName);
 	}
 	
 	private int gotoSameState() {
