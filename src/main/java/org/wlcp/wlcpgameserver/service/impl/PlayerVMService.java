@@ -1,5 +1,7 @@
 package org.wlcp.wlcpgameserver.service.impl;
 
+import java.util.concurrent.Semaphore;
+
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -43,6 +45,7 @@ public class PlayerVMService extends Thread {
 	private boolean shutdown = false;
 	private IMessage blockMessage = null;
 	private IMessage lastSentPacket = null;
+	private Semaphore masterGlobalVariableMutex = new Semaphore(1);
 	
 	public void setupVariables(GameInstanceService gameInstanceService, Player player, String transpiledGame) {
 		this.gameInstanceService = gameInstanceService;
@@ -233,8 +236,26 @@ public class PlayerVMService extends Thread {
 		}
 	}
 	
-	public Object getGlobalVariable(String variableName) throws ScriptException {
-		return scriptEngine.eval("FSMGame." + variableName);
+	public Object getGlobalVariableMaster(String variableName) throws ScriptException, InterruptedException {
+		masterGlobalVariableMutex.acquire();
+		Object value = scriptEngine.eval("FSMGame." + variableName);
+		masterGlobalVariableMutex.release();
+		return value;
+	}
+	
+	public Object getGlobalVariable(String variableName) throws ScriptException, InterruptedException {
+		return gameInstanceService.getMasterPlayerVMService().getGlobalVariableMaster(variableName);
+	}
+	
+	public Object setGlobalVariableMaster(String expression) throws ScriptException, InterruptedException {
+		masterGlobalVariableMutex.acquire();
+		Object value = scriptEngine.eval(expression);
+		masterGlobalVariableMutex.release();
+		return value;
+	}
+	
+	public Object setGlobalVariable(String expression) throws ScriptException, InterruptedException {
+		return gameInstanceService.getMasterPlayerVMService().setGlobalVariableMaster(expression);
 	}
 	
 	private int gotoSameState() {
