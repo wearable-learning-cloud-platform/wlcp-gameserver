@@ -21,6 +21,7 @@ import org.wlcp.wlcpgameserver.dto.messages.PlaySoundMessage;
 import org.wlcp.wlcpgameserver.dto.messages.PlayVideoMessage;
 import org.wlcp.wlcpgameserver.dto.messages.SequenceButtonPressMessage;
 import org.wlcp.wlcpgameserver.dto.messages.SingleButtonPressMessage;
+import org.wlcp.wlcpgameserver.dto.messages.TimerDurationMessage;
 import org.wlcp.wlcpgameserver.model.Player;
 
 import jdk.nashorn.api.scripting.JSObject;
@@ -231,6 +232,17 @@ public class PlayerVMService extends Thread {
 				}
 			}
 		}
+	}
+	
+	public void Delay(int delay) throws InterruptedException {
+		block = true;
+		TimerDurationMessage msg = new TimerDurationMessage();
+		msg.duration = delay;
+		lastSentPacket = msg;
+		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/timerDurationRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+		Thread.sleep(delay * 1000);
+		block = false;
+		return;
 	}
 	
 	public Object getGlobalVariable(String variableName) throws ScriptException {
