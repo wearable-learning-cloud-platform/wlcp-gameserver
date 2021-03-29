@@ -1,5 +1,7 @@
 package org.wlcp.wlcpgameserver.service.impl;
 
+import java.util.Random;
+
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -232,6 +234,11 @@ public class PlayerVMService extends Thread {
 				}
 			}
 		}
+	}
+	
+	public int RandomTransition(int[] randomStates) {
+		Random random = new Random(System.currentTimeMillis());
+		return randomStates[random.nextInt(randomStates.length - 1)];
 	}
 	
 	public void Delay(int delay) throws InterruptedException {
