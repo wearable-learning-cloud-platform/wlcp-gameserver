@@ -1,6 +1,9 @@
 package org.wlcp.wlcpgameserver.service.impl;
 
+import java.util.Date;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
@@ -44,6 +47,7 @@ public class PlayerVMService extends Thread {
 	private boolean block = true;
 	private boolean reconnect = false;
 	private boolean shutdown = false;
+	private boolean timerElapsed = false;
 	private IMessage blockMessage = null;
 	private IMessage lastSentPacket = null;
 	
@@ -101,6 +105,10 @@ public class PlayerVMService extends Thread {
 			}
 			if(shutdown) {
 				return - 3;
+			}
+			if(timerElapsed) {
+				timerElapsed = false;
+				return -4;
 			}
 			try {
 				Thread.sleep(17);
@@ -250,6 +258,20 @@ public class PlayerVMService extends Thread {
 		Thread.sleep(delay * 1000);
 		block = false;
 		return;
+	}
+	
+	public void Timer(int delay, int nextState) {
+		Timer timer = new Timer("Timer");
+		timer.schedule(new TimerTask() {
+	        public void run() {
+	            try {
+	            	timerElapsed = true;
+	            	while(timerElapsed) {};
+					scriptEngine.eval("FSMGame.state = " + nextState);
+				} catch (ScriptException e) {
+					e.printStackTrace();
+				}
+	        }}, delay * 1000);
 	}
 	
 	public Object getGlobalVariable(String variableName) throws ScriptException {
