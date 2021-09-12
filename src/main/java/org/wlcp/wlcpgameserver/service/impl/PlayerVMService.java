@@ -1,6 +1,5 @@
 package org.wlcp.wlcpgameserver.service.impl;
 
-import java.util.Date;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -18,6 +17,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.wlcp.wlcpgameserver.dto.messages.DisplayPhotoMessage;
 import org.wlcp.wlcpgameserver.dto.messages.DisplayTextMessage;
+import org.wlcp.wlcpgameserver.dto.messages.EmptyMessage;
 import org.wlcp.wlcpgameserver.dto.messages.IMessage;
 import org.wlcp.wlcpgameserver.dto.messages.KeyboardInputMessage;
 import org.wlcp.wlcpgameserver.dto.messages.NoStateMessage;
@@ -245,8 +245,18 @@ public class PlayerVMService extends Thread {
 	}
 	
 	public int RandomTransition(int[] randomStates) {
-		Random random = new Random(System.currentTimeMillis());
-		return randomStates[random.nextInt(randomStates.length - 1)];
+		while(true) {
+			block = true;
+			EmptyMessage msg = new EmptyMessage();
+			lastSentPacket = msg;
+			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/randomInputRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+			int state;
+			while((state = block()) == -2) {}
+			if(state != -2 && state != -1) { return state; }
+			msg = (EmptyMessage) blockMessage;
+			Random random = new Random(System.currentTimeMillis());
+			return randomStates[random.nextInt(randomStates.length - 1)];
+		}
 	}
 	
 	public void Delay(int delay) throws InterruptedException {

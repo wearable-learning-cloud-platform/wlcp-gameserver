@@ -23,6 +23,7 @@ import org.wlcp.wlcpgameserver.dto.UsernameDto;
 import org.wlcp.wlcpgameserver.dto.messages.ConnectRequestMessage;
 import org.wlcp.wlcpgameserver.dto.messages.ConnectResponseMessage;
 import org.wlcp.wlcpgameserver.dto.messages.ConnectResponseMessage.Code;
+import org.wlcp.wlcpgameserver.dto.messages.EmptyMessage;
 import org.wlcp.wlcpgameserver.dto.messages.IMessage;
 import org.wlcp.wlcpgameserver.dto.messages.KeyboardInputMessage;
 import org.wlcp.wlcpgameserver.dto.messages.PlayerAvaliableMessage;
@@ -270,6 +271,20 @@ public class GameInstanceService extends Thread {
 	
 	@MessageMapping("/gameInstance/{gameInstanceId}/keyboardInput/{usernameId}/{team}/{player}")
 	public String keyboardInput(@DestinationVariable int gameInstanceId, @DestinationVariable String usernameId, @DestinationVariable int team, @DestinationVariable int player, @RequestBody KeyboardInputMessage msg) {
+		for(GameInstanceService gameInstance : gameInstanceController.gameInstances) {
+			if(gameInstance.getGameInstance().getGameInstanceId().equals(gameInstanceId)) {
+				for(Player p : gameInstance.players) {
+					if(p.teamPlayer.team == team && p.teamPlayer.player == player) {
+						p.playerVM.unblock(msg);
+					}
+				}
+			}
+		}
+		return "";
+	}
+	
+	@MessageMapping("/gameInstance/{gameInstanceId}/randomInput/{usernameId}/{team}/{player}")
+	public String RandomInput(@DestinationVariable int gameInstanceId, @DestinationVariable String usernameId, @DestinationVariable int team, @DestinationVariable int player, @RequestBody EmptyMessage msg) {
 		for(GameInstanceService gameInstance : gameInstanceController.gameInstances) {
 			if(gameInstance.getGameInstance().getGameInstanceId().equals(gameInstanceId)) {
 				for(Player p : gameInstance.players) {
