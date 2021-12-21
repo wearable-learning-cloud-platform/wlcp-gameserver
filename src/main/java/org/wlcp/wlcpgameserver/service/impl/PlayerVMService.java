@@ -48,6 +48,7 @@ public class PlayerVMService extends Thread {
 	private boolean reconnect = false;
 	private boolean shutdown = false;
 	private boolean timerElapsed = false;
+	private int timerElapsedNextState = 0;
 	private IMessage blockMessage = null;
 	private IMessage lastSentPacket = null;
 	
@@ -108,7 +109,7 @@ public class PlayerVMService extends Thread {
 			}
 			if(timerElapsed) {
 				timerElapsed = false;
-				return -4;
+				return timerElapsedNextState;
 			}
 			try {
 				Thread.sleep(17);
@@ -271,16 +272,11 @@ public class PlayerVMService extends Thread {
 	}
 	
 	public void Timer(int delay, int nextState) {
+		this.timerElapsedNextState = nextState;
 		Timer timer = new Timer("Timer");
 		timer.schedule(new TimerTask() {
 	        public void run() {
-	            try {
-	            	timerElapsed = true;
-	            	while(timerElapsed) {};
-					scriptEngine.eval("FSMGame.state = " + nextState);
-				} catch (ScriptException e) {
-					e.printStackTrace();
-				}
+	            timerElapsed = true;
 	        }}, delay * 1000);
 	}
 	
