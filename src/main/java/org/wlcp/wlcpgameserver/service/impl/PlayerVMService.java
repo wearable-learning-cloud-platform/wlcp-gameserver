@@ -272,6 +272,11 @@ public class PlayerVMService extends Thread {
 	}
 	
 	public void Timer(int delay, int nextState) {
+		TimerDurationMessage msg = new TimerDurationMessage();
+		msg.duration = delay;
+		msg.isTimer = true;
+		lastSentPacket = msg;
+		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/timerDurationRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 		this.timerElapsedNextState = nextState;
 		Timer timer = new Timer("Timer");
 		timer.schedule(new TimerTask() {
