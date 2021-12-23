@@ -63,6 +63,7 @@ public class GameInstanceService extends Thread {
 	private UsernameDto username;
 	private GameInstance gameInstance;
 	private boolean debugInstance;
+	private boolean archivedGame;
 	
 	private String transpiledGame;
 	
@@ -71,10 +72,11 @@ public class GameInstanceService extends Thread {
 	
 	private boolean running = true;
 	
-	public void setupVariables(GameDto game, UsernameDto username, boolean debugInstance) {
+	public void setupVariables(GameDto game, UsernameDto username, boolean debugInstance, boolean archivedGame) {
 		this.game = game;
 		this.username = username;
 		this.debugInstance = debugInstance;
+		this.archivedGame = archivedGame;
 	}
 	
 	@Override
@@ -101,7 +103,7 @@ public class GameInstanceService extends Thread {
 		if(!gameInstance.isDebugInstance()) { logger.info("Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId); }
 		if(gameInstance.isDebugInstance()) { logger.info("Debug Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId); }
 		this.setName("WLCP-" + game.gameId + "-" + gameInstance.getGameInstanceId());
-		transpiledGame = transpilerFeignClient.transpileGame(game.gameId);
+		transpiledGame = transpilerFeignClient.transpileGame(game.gameId, archivedGame);
 	}
 	
 	public ConnectResponseMessage userConnect(ConnectRequestMessage connect) {
