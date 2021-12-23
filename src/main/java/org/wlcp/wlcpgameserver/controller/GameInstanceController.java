@@ -66,7 +66,7 @@ public class GameInstanceController {
 		UsernameDto usernameDto = usernameFeignClient.getUsername(startGameInstanceDto.usernameId, SecurityConstants.JWT_TOKEN);
 		if(gameDto != null && usernameDto != null) {
 			GameInstanceService service = context.getBean(GameInstanceService.class);
-			service.setupVariables(gameDto, usernameDto, false);
+			service.setupVariables(gameDto, usernameDto, false, false);
 			service.start();
 			gameInstances.add(service);
 			return ResponseEntity.status(HttpStatus.OK).body("{}");
@@ -77,7 +77,12 @@ public class GameInstanceController {
 	
 	@PostMapping("/startDebugGameInstance")
 	public ResponseEntity<Integer> startDebugGameInstance(@RequestBody StartDebugGameInstanceDto startDebugGameInstance) throws InterruptedException {
-		GameDto gameDto = gameFeignClient.getGame(startDebugGameInstance.gameId, SecurityConstants.JWT_TOKEN);
+		GameDto gameDto = null;
+		if(startDebugGameInstance.archivedGame) {
+			gameDto = gameFeignClient.getArchivedGame(startDebugGameInstance.gameId, SecurityConstants.JWT_TOKEN);
+		} else {
+			gameDto = gameFeignClient.getGame(startDebugGameInstance.gameId, SecurityConstants.JWT_TOKEN);
+		}
 		UsernameDto usernameDto = usernameFeignClient.getUsername(startDebugGameInstance.usernameId, SecurityConstants.JWT_TOKEN);
 		if(gameDto != null && usernameDto != null) {
 			List<GameInstance> foundGameInstances = null;
@@ -99,14 +104,14 @@ public class GameInstanceController {
 					}
 				}
 				GameInstanceService service = context.getBean(GameInstanceService.class);
-				service.setupVariables(gameDto, usernameDto, true);
+				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame);
 				service.start();
 				gameInstances.add(service);
 				Thread.sleep(500); //This really should not be done, but were gonna go with it
 				return ResponseEntity.status(HttpStatus.OK).body(service.getGameInstance().getGameInstanceId());
 			} else {
 				GameInstanceService service = context.getBean(GameInstanceService.class);
-				service.setupVariables(gameDto, usernameDto, true);
+				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame);
 				service.start();
 				gameInstances.add(service);
 				Thread.sleep(500); //This really should not be done, but were gonna go with it
