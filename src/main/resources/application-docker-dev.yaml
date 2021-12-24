@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: wlcp-gameserver
+server:
+  port: 3333
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://wlcp-discovery-dev:8761/eureka/
+wlcp-api-url:
+wlcp-transpiler-url:
