@@ -1,6 +1,14 @@
 spring:
   application:
     name: wlcp-gameserver
+  datasource:
+    url: jdbc:mysql://localhost:3306/wlcp-gameserver
+    username: wlcp
+    password: wlcp
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
+    hibernate:
+      ddl-auto: create-drop
 server:
   port: 3333
 eureka:
