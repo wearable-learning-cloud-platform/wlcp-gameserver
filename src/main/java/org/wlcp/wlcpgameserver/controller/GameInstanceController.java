@@ -107,6 +107,9 @@ public class GameInstanceController {
 				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame);
 				service.start();
 				gameInstances.add(service);
+				while(service.getGameInstance() == null) {
+					Thread.sleep(100);
+				}
 				Thread.sleep(500); //This really should not be done, but were gonna go with it
 				return ResponseEntity.status(HttpStatus.OK).body(service.getGameInstance().getGameInstanceId());
 			} else {
@@ -114,6 +117,9 @@ public class GameInstanceController {
 				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame);
 				service.start();
 				gameInstances.add(service);
+				while(service.getGameInstance() == null) {
+					Thread.sleep(100);
+				}
 				Thread.sleep(500); //This really should not be done, but were gonna go with it
 				return ResponseEntity.status(HttpStatus.OK).body(service.getGameInstance().getGameInstanceId());
 			}
