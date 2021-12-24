@@ -139,8 +139,9 @@ public class GameInstanceController {
 	
 	@GetMapping("/playersAvaliable/{gameInstanceId}/{usernameId}")
 	public ResponseEntity<List<PlayerAvaliableMessage>> playersAvailable(@PathVariable int gameInstanceId, @PathVariable String usernameId) {
-		UsernameDto usernameDto = usernameFeignClient.getUsername(usernameId, SecurityConstants.JWT_TOKEN);
-		if(usernameDto == null) { return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); }
+		if(usernameId == null) { return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); }
+		UsernameDto usernameDto = new UsernameDto();
+		usernameDto.usernameId = usernameId;
 		for(GameInstanceService gameInstance : gameInstances) {
 			if(gameInstance.getGameInstance().getGameInstanceId().equals(gameInstanceId)) {
 				return ResponseEntity.status(HttpStatus.OK).body(gameInstance.getTeamsAndPlayers(usernameId));
