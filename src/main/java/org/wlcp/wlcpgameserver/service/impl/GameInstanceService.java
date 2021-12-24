@@ -111,6 +111,12 @@ public class GameInstanceService extends Thread {
 		//Get the user from the db
 		UsernameDto usernameDto = usernameFeignClient.getUsername(connect.usernameId, SecurityConstants.JWT_TOKEN);
 		
+		if(usernameDto == null) {
+			usernameDto = new UsernameDto();
+			usernameDto.usernameId = connect.usernameId;
+			usernameDto.tempPlayer = true;
+		}
+		
 		//Check to make sure the player doesnt already exist in the game (for reconnect)
 		if(!debugInstance) {
 			for(Player player : players) {
