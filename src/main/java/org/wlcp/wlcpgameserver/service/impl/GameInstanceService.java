@@ -97,12 +97,6 @@ public class GameInstanceService extends Thread {
 	}
 	
 	private void setup() {
-//		gameInstance = gameInstanceRepository.save(new GameInstance());
-//		gameInstance.setGameId(game.gameId);
-//		gameInstance.setUsernameId(username.usernameId);
-//		gameInstance.setDebugInstance(debugInstance);
-//		gameInstanceRepository.save(gameInstance);
-//		gameInstanceRepository.flush();
 		gameInstance = new GameInstance(game.gameId, username.usernameId, debugInstance);
 		gameInstance = gameInstanceRepository.save(gameInstance);
 		if(!debugInstance) { logger.info("Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId); }
@@ -242,10 +236,9 @@ public class GameInstanceService extends Thread {
 			player.playerVM.shutdown();
 		}
 		running = false;
-		//gameInstanceRepository.delete(gameInstance);
-		//gameInstanceRepository.flush();
 		gameInstance.setEnd(Timestamp.from(Instant.now()));
 		gameInstance.setDuration(gameInstance.getEnd().getTime() - gameInstance.getStart().getTime());
+		gameInstance.setGameEnded(true);
 		gameInstanceRepository.save(gameInstance);	
 		logger.info("Game Instance: " + gameInstance.getGameInstanceId() + " stopped! No longer playing the game: " + game.gameId);
 	}
