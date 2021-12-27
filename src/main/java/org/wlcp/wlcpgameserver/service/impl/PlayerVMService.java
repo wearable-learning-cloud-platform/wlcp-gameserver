@@ -181,10 +181,14 @@ public class PlayerVMService extends Thread {
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/noTransition/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 	}
 
-	public int SingleButtonPress(String[] buttons, int[] transitions) throws ScriptException {
+	public int SingleButtonPress(String[] buttons, int[] transitions, String[] labels) throws ScriptException {
 		while(true) {
 			block = true;
 			SingleButtonPressMessage msg = new SingleButtonPressMessage();
+			msg.label1 = labels[0];
+			msg.label2 = labels[1];
+			msg.label3 = labels[2];
+			msg.label4 = labels[3];
 			lastSentPacket = msg;
 			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/singleButtonPressRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 			int state;
