@@ -75,6 +75,8 @@ public class GameInstanceService extends Thread {
 	
 	private boolean running = true;
 	
+	private PlayerVMService masterPlayerVMService;
+	
 	public void setupVariables(GameDto game, UsernameDto username, boolean debugInstance, boolean archivedGame) {
 		this.game = game;
 		this.username = username;
@@ -103,6 +105,7 @@ public class GameInstanceService extends Thread {
 		if(debugInstance) { logger.info("Debug Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId); }
 		this.setName("WLCP-" + game.gameId + "-" + gameInstance.getGameInstanceId());
 		transpiledGame = transpilerFeignClient.transpileGame(game.gameId, archivedGame);
+		masterPlayerVMService = this.StartMasterVM();
 	}
 	
 	public ConnectResponseMessage userConnect(ConnectRequestMessage connect) {
@@ -184,6 +187,17 @@ public class GameInstanceService extends Thread {
 				break;
 			}
 		}
+	}
+	
+	private PlayerVMService StartMasterVM() {
+		UsernameDto usernameDto = new UsernameDto();
+		usernameDto.usernameId = "MasterVM";
+		Player player = new Player(new UsernameClientData(usernameDto), new TeamPlayer(-1, -1));
+
+		PlayerVMService service = context.getBean(PlayerVMService.class);
+		service.setupVariables(this, player, transpiledGame.replace("running : true", "running : false"));
+		service.start();
+		return service;
 	}
 	
 	private PlayerVMService StartPlayerVM(Player player) {
@@ -323,6 +337,10 @@ public class GameInstanceService extends Thread {
 
 	public GameInstance getGameInstance() {
 		return gameInstance;
+	}
+	
+	public PlayerVMService getMasterPlayerVMService() {
+		return masterPlayerVMService;
 	}
 
 }
