@@ -61,7 +61,7 @@ public class GameInstanceController {
 	}
 	
 	@PostMapping("/startGameInstance")
-	public ResponseEntity<String> startGameInstance(@RequestBody StartGameInstanceDto startGameInstanceDto) {
+	public ResponseEntity<Object> startGameInstance(@RequestBody StartGameInstanceDto startGameInstanceDto) throws InterruptedException {
 		GameDto gameDto = gameFeignClient.getGame(startGameInstanceDto.gameId, SecurityConstants.JWT_TOKEN);
 		UsernameDto usernameDto = usernameFeignClient.getUsername(startGameInstanceDto.usernameId, SecurityConstants.JWT_TOKEN);
 		if(gameDto != null && usernameDto != null) {
@@ -69,9 +69,13 @@ public class GameInstanceController {
 			service.setupVariables(gameDto, usernameDto, false, false);
 			service.start();
 			gameInstances.add(service);
-			return ResponseEntity.status(HttpStatus.OK).body("{}");
+			while(service.getGameInstance() == null) {
+				Thread.sleep(100);
+			}
+			Thread.sleep(500); //This really should not be done, but were gonna go with it
+			return new ResponseEntity<Object>(service.getGameInstance(), HttpStatus.OK);
 		} else {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("The game " + startGameInstanceDto.gameId + " username " + startGameInstanceDto.usernameId + " does not exist, so an insance could not be started!");
+			return new ResponseEntity<Object>("The game " + startGameInstanceDto.gameId + " username " + startGameInstanceDto.usernameId + " does not exist, so an insance could not be started!", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 	
@@ -128,18 +132,18 @@ public class GameInstanceController {
 	}
 	
 	@PostMapping("/stopGameInstance")
-	public ResponseEntity<String> stopGameInstance(@RequestBody StopGameInstanceDto stopGameInstanceDto) {
+	public ResponseEntity<Object> stopGameInstance(@RequestBody StopGameInstanceDto stopGameInstanceDto) {
 		if(gameInstanceRepository.existsById(stopGameInstanceDto.gameInstanceId)) {
 			for(GameInstanceService instance : gameInstances) {
 				if(instance.getGameInstance().getGameInstanceId().equals(stopGameInstanceDto.gameInstanceId)) {
 					instance.shutdown();
 					gameInstances.remove(instance);
-					break;
+					return new ResponseEntity<Object>(instance.getGameInstance(), HttpStatus.OK);
 				}
 			}
-			return ResponseEntity.status(HttpStatus.OK).body("{}");
+			return new ResponseEntity<Object>("The game instance: " + stopGameInstanceDto.gameInstanceId + " does not exist, so it could not be stopped!", HttpStatus.INTERNAL_SERVER_ERROR);
 		} else {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("The game instance: " + stopGameInstanceDto.gameInstanceId + " does not exist, so it could not be stopped!");
+			return new ResponseEntity<Object>("The game instance: " + stopGameInstanceDto.gameInstanceId + " does not exist, so it could not be stopped!", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 	
