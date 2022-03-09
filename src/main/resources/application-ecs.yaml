@@ -9,5 +9,11 @@ eureka:
       defaultZone: ${EUREKA_DEFAULT_ZONE}
    instance:    prefer-ip-address: true
     ip-address: ${ECS_INSTANCE_IP_ADDRESS}
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 60000
+        readTimeout: 60000
 wlcp-api-url:
 wlcp-transpiler-url:
