@@ -1,5 +1,7 @@
 package org.wlcp.wlcpgameserver.service.impl;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.wlcp.wlcpgameserver.controller.GameInstanceController;
 import org.wlcp.wlcpgameserver.datamodel.master.GameInstance;
+import org.wlcp.wlcpgameserver.datamodel.master.GameInstancePlayer;
 import org.wlcp.wlcpgameserver.dto.GameDto;
 import org.wlcp.wlcpgameserver.dto.UsernameDto;
 import org.wlcp.wlcpgameserver.dto.messages.ConnectRequestMessage;
@@ -63,6 +66,7 @@ public class GameInstanceService extends Thread {
 	private UsernameDto username;
 	private GameInstance gameInstance;
 	private boolean debugInstance;
+	private boolean archivedGame;
 	
 	private String transpiledGame;
 	
@@ -71,10 +75,13 @@ public class GameInstanceService extends Thread {
 	
 	private boolean running = true;
 	
-	public void setupVariables(GameDto game, UsernameDto username, boolean debugInstance) {
+	private PlayerVMService masterPlayerVMService;
+	
+	public void setupVariables(GameDto game, UsernameDto username, boolean debugInstance, boolean archivedGame) {
 		this.game = game;
 		this.username = username;
 		this.debugInstance = debugInstance;
+		this.archivedGame = archivedGame;
 	}
 	
 	@Override
@@ -92,22 +99,25 @@ public class GameInstanceService extends Thread {
 	}
 	
 	private void setup() {
-		gameInstance = gameInstanceRepository.save(new GameInstance());
-		gameInstance.setGameId(game.gameId);
-		gameInstance.setUsernameId(username.usernameId);
-		gameInstance.setDebugInstance(debugInstance);
-		gameInstanceRepository.save(gameInstance);
-		gameInstanceRepository.flush();
-		if(!gameInstance.isDebugInstance()) { logger.info("Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId); }
-		if(gameInstance.isDebugInstance()) { logger.info("Debug Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId); }
+		gameInstance = new GameInstance(game.gameId, username.usernameId, debugInstance);
+		gameInstance = gameInstanceRepository.save(gameInstance);
+		if(!debugInstance) { logger.info("Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId); }
+		if(debugInstance) { logger.info("Debug Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId); }
 		this.setName("WLCP-" + game.gameId + "-" + gameInstance.getGameInstanceId());
-		transpiledGame = transpilerFeignClient.transpileGame(game.gameId);
+		transpiledGame = transpilerFeignClient.transpileGame(game.gameId, archivedGame);
+		masterPlayerVMService = this.StartMasterVM();
 	}
 	
 	public ConnectResponseMessage userConnect(ConnectRequestMessage connect) {
 		
 		//Get the user from the db
 		UsernameDto usernameDto = usernameFeignClient.getUsername(connect.usernameId, SecurityConstants.JWT_TOKEN);
+		
+		if(usernameDto == null) {
+			usernameDto = new UsernameDto();
+			usernameDto.usernameId = connect.usernameId;
+			usernameDto.tempPlayer = true;
+		}
 		
 		//Check to make sure the player doesnt already exist in the game (for reconnect)
 		if(!debugInstance) {
@@ -150,6 +160,9 @@ public class GameInstanceService extends Thread {
 		//Log the event
 		logger.info("user " + player.usernameClientData.username.usernameId + " joined" + " playing the game" + "\"" + game.gameId + "\"");
 		
+		gameInstance.getPlayers().add(new GameInstancePlayer(usernameDto.tempPlayer, usernameDto.usernameId));
+		gameInstance = gameInstanceRepository.save(gameInstance);
+		
 		ConnectResponseMessage msg = new ConnectResponseMessage();
 		msg.team = teamPlayer.team;
 		msg.player = teamPlayer.player;
@@ -174,6 +187,17 @@ public class GameInstanceService extends Thread {
 				break;
 			}
 		}
+	}
+	
+	private PlayerVMService StartMasterVM() {
+		UsernameDto usernameDto = new UsernameDto();
+		usernameDto.usernameId = "MasterVM";
+		Player player = new Player(new UsernameClientData(usernameDto), new TeamPlayer(-1, -1));
+
+		PlayerVMService service = context.getBean(PlayerVMService.class);
+		service.setupVariables(this, player, transpiledGame.replace("running : true", "running : false"));
+		service.start();
+		return service;
 	}
 	
 	private PlayerVMService StartPlayerVM(Player player) {
@@ -226,8 +250,10 @@ public class GameInstanceService extends Thread {
 			player.playerVM.shutdown();
 		}
 		running = false;
-		gameInstanceRepository.delete(gameInstance);
-		gameInstanceRepository.flush();
+		gameInstance.setEnd(Timestamp.from(Instant.now()));
+		gameInstance.setDuration(gameInstance.getEnd().getTime() - gameInstance.getStart().getTime());
+		gameInstance.setGameEnded(true);
+		gameInstanceRepository.delete(gameInstance);	
 		logger.info("Game Instance: " + gameInstance.getGameInstanceId() + " stopped! No longer playing the game: " + game.gameId);
 	}
 	
@@ -311,6 +337,10 @@ public class GameInstanceService extends Thread {
 
 	public GameInstance getGameInstance() {
 		return gameInstance;
+	}
+	
+	public PlayerVMService getMasterPlayerVMService() {
+		return masterPlayerVMService;
 	}
 
 }

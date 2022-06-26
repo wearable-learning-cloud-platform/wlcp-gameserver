@@ -5,5 +5,6 @@ public class StartDebugGameInstanceDto {
 	public String gameId;
 	public String usernameId;
 	public Boolean restart;
+	public Boolean archivedGame;
 	
 }

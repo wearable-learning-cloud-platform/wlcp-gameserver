@@ -61,23 +61,32 @@ public class GameInstanceController {
 	}
 	
 	@PostMapping("/startGameInstance")
-	public ResponseEntity<String> startGameInstance(@RequestBody StartGameInstanceDto startGameInstanceDto) {
+	public ResponseEntity<Object> startGameInstance(@RequestBody StartGameInstanceDto startGameInstanceDto) throws InterruptedException {
 		GameDto gameDto = gameFeignClient.getGame(startGameInstanceDto.gameId, SecurityConstants.JWT_TOKEN);
 		UsernameDto usernameDto = usernameFeignClient.getUsername(startGameInstanceDto.usernameId, SecurityConstants.JWT_TOKEN);
 		if(gameDto != null && usernameDto != null) {
 			GameInstanceService service = context.getBean(GameInstanceService.class);
-			service.setupVariables(gameDto, usernameDto, false);
+			service.setupVariables(gameDto, usernameDto, false, false);
 			service.start();
 			gameInstances.add(service);
-			return ResponseEntity.status(HttpStatus.OK).body("{}");
+			while(service.getGameInstance() == null) {
+				Thread.sleep(100);
+			}
+			Thread.sleep(500); //This really should not be done, but were gonna go with it
+			return new ResponseEntity<Object>(service.getGameInstance(), HttpStatus.OK);
 		} else {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("The game " + startGameInstanceDto.gameId + " username " + startGameInstanceDto.usernameId + " does not exist, so an insance could not be started!");
+			return new ResponseEntity<Object>("The game " + startGameInstanceDto.gameId + " username " + startGameInstanceDto.usernameId + " does not exist, so an insance could not be started!", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 	
 	@PostMapping("/startDebugGameInstance")
 	public ResponseEntity<Integer> startDebugGameInstance(@RequestBody StartDebugGameInstanceDto startDebugGameInstance) throws InterruptedException {
-		GameDto gameDto = gameFeignClient.getGame(startDebugGameInstance.gameId, SecurityConstants.JWT_TOKEN);
+		GameDto gameDto = null;
+		if(startDebugGameInstance.archivedGame) {
+			gameDto = gameFeignClient.getArchivedGame(startDebugGameInstance.gameId, SecurityConstants.JWT_TOKEN);
+		} else {
+			gameDto = gameFeignClient.getGame(startDebugGameInstance.gameId, SecurityConstants.JWT_TOKEN);
+		}
 		UsernameDto usernameDto = usernameFeignClient.getUsername(startDebugGameInstance.usernameId, SecurityConstants.JWT_TOKEN);
 		if(gameDto != null && usernameDto != null) {
 			List<GameInstance> foundGameInstances = null;
@@ -99,16 +108,22 @@ public class GameInstanceController {
 					}
 				}
 				GameInstanceService service = context.getBean(GameInstanceService.class);
-				service.setupVariables(gameDto, usernameDto, true);
+				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame);
 				service.start();
 				gameInstances.add(service);
+				while(service.getGameInstance() == null) {
+					Thread.sleep(100);
+				}
 				Thread.sleep(500); //This really should not be done, but were gonna go with it
 				return ResponseEntity.status(HttpStatus.OK).body(service.getGameInstance().getGameInstanceId());
 			} else {
 				GameInstanceService service = context.getBean(GameInstanceService.class);
-				service.setupVariables(gameDto, usernameDto, true);
+				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame);
 				service.start();
 				gameInstances.add(service);
+				while(service.getGameInstance() == null) {
+					Thread.sleep(100);
+				}
 				Thread.sleep(500); //This really should not be done, but were gonna go with it
 				return ResponseEntity.status(HttpStatus.OK).body(service.getGameInstance().getGameInstanceId());
 			}
@@ -117,25 +132,26 @@ public class GameInstanceController {
 	}
 	
 	@PostMapping("/stopGameInstance")
-	public ResponseEntity<String> stopGameInstance(@RequestBody StopGameInstanceDto stopGameInstanceDto) {
+	public ResponseEntity<Object> stopGameInstance(@RequestBody StopGameInstanceDto stopGameInstanceDto) {
 		if(gameInstanceRepository.existsById(stopGameInstanceDto.gameInstanceId)) {
 			for(GameInstanceService instance : gameInstances) {
 				if(instance.getGameInstance().getGameInstanceId().equals(stopGameInstanceDto.gameInstanceId)) {
 					instance.shutdown();
 					gameInstances.remove(instance);
-					break;
+					return new ResponseEntity<Object>(instance.getGameInstance(), HttpStatus.OK);
 				}
 			}
-			return ResponseEntity.status(HttpStatus.OK).body("{}");
+			return new ResponseEntity<Object>("The game instance: " + stopGameInstanceDto.gameInstanceId + " does not exist, so it could not be stopped!", HttpStatus.INTERNAL_SERVER_ERROR);
 		} else {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("The game instance: " + stopGameInstanceDto.gameInstanceId + " does not exist, so it could not be stopped!");
+			return new ResponseEntity<Object>("The game instance: " + stopGameInstanceDto.gameInstanceId + " does not exist, so it could not be stopped!", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 	
 	@GetMapping("/playersAvaliable/{gameInstanceId}/{usernameId}")
 	public ResponseEntity<List<PlayerAvaliableMessage>> playersAvailable(@PathVariable int gameInstanceId, @PathVariable String usernameId) {
-		UsernameDto usernameDto = usernameFeignClient.getUsername(usernameId, SecurityConstants.JWT_TOKEN);
-		if(usernameDto == null) { return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); }
+		if(usernameId == null) { return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); }
+		UsernameDto usernameDto = new UsernameDto();
+		usernameDto.usernameId = usernameId;
 		for(GameInstanceService gameInstance : gameInstances) {
 			if(gameInstance.getGameInstance().getGameInstanceId().equals(gameInstanceId)) {
 				return ResponseEntity.status(HttpStatus.OK).body(gameInstance.getTeamsAndPlayers(usernameId));

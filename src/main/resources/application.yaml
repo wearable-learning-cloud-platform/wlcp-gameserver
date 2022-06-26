@@ -10,5 +10,11 @@ eureka:
   instance:
     prefer-ip-address: true
     hostname: docker-host
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 60000
+        readTimeout: 60000
 wlcp-api-url: localhost:8082
 wlcp-transpiler-url: localhost:8083

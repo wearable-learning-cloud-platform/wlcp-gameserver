@@ -9,6 +9,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 public interface TranspilerFeignClient {
 
     @RequestMapping(method=RequestMethod.GET, value="/transpilerController/transpileGame")
-    String transpileGame(@RequestParam("gameId") String gameId);
+    String transpileGame(@RequestParam("gameId") String gameId, @RequestParam("archivedGame") boolean archivedGame);
 
 }

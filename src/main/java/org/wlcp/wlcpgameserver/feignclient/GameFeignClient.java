@@ -12,5 +12,8 @@ public interface GameFeignClient {
 	
     @RequestMapping(method=RequestMethod.GET, value="/gameController/getGame/{gameId}")
     GameDto getGame(@PathVariable String gameId, @RequestHeader("Authorization") String bearerToken);
+    
+    @RequestMapping(method=RequestMethod.GET, value="/gameController/getArchivedGame/{gameId}")
+    GameDto getArchivedGame(@PathVariable String gameId, @RequestHeader("Authorization") String bearerToken);
 
 }

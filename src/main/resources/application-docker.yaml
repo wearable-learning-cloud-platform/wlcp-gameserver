@@ -7,5 +7,9 @@ eureka:
   client:
     serviceUrl:
       defaultZone: http://wlcp-discovery:8761/eureka/
+feign:  client:    config:
+      default:
+        connectTimeout: 60000
+        readTimeout: 60000
 wlcp-api-url:
 wlcp-transpiler-url:

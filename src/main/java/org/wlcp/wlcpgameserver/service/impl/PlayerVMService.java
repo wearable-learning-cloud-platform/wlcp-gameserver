@@ -3,6 +3,7 @@ package org.wlcp.wlcpgameserver.service.impl;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.Semaphore;
 
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
@@ -51,6 +52,7 @@ public class PlayerVMService extends Thread {
 	private int timerElapsedNextState = 0;
 	private IMessage blockMessage = null;
 	private IMessage lastSentPacket = null;
+	private Semaphore masterGlobalVariableMutex = new Semaphore(1);
 	
 	public void setupVariables(GameInstanceService gameInstanceService, Player player, String transpiledGame) {
 		this.gameInstanceService = gameInstanceService;
@@ -181,10 +183,14 @@ public class PlayerVMService extends Thread {
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/noTransition/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 	}
 
-	public int SingleButtonPress(String[] buttons, int[] transitions) throws ScriptException {
+	public int SingleButtonPress(String[] buttons, int[] transitions, String[] labels) throws ScriptException {
 		while(true) {
 			block = true;
 			SingleButtonPressMessage msg = new SingleButtonPressMessage();
+			msg.label1 = labels[0];
+			msg.label2 = labels[1];
+			msg.label3 = labels[2];
+			msg.label4 = labels[3];
 			lastSentPacket = msg;
 			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/singleButtonPressRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 			int state;
@@ -285,8 +291,26 @@ public class PlayerVMService extends Thread {
 	        }}, delay * 1000);
 	}
 	
-	public Object getGlobalVariable(String variableName) throws ScriptException {
-		return scriptEngine.eval("FSMGame." + variableName);
+	public Object getGlobalVariableMaster(String variableName) throws ScriptException, InterruptedException {
+		masterGlobalVariableMutex.acquire();
+		Object value = scriptEngine.eval("FSMGame." + variableName);
+		masterGlobalVariableMutex.release();
+		return value;
+	}
+
+	public Object getGlobalVariable(String variableName) throws ScriptException, InterruptedException {
+		return gameInstanceService.getMasterPlayerVMService().getGlobalVariableMaster(variableName);
+	}
+
+	public Object setGlobalVariableMaster(String expression) throws ScriptException, InterruptedException {
+		masterGlobalVariableMutex.acquire();
+		Object value = scriptEngine.eval(expression);
+		masterGlobalVariableMutex.release();
+		return value;
+	}
+
+	public Object setGlobalVariable(String expression) throws ScriptException, InterruptedException {
+		return gameInstanceService.getMasterPlayerVMService().setGlobalVariableMaster(expression);
 	}
 	
 	private int gotoSameState() {
