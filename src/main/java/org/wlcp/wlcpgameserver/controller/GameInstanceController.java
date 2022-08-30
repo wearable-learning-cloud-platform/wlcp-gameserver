@@ -69,10 +69,7 @@ public class GameInstanceController {
 			service.setupVariables(gameDto, usernameDto, false, false);
 			service.start();
 			gameInstances.add(service);
-			while(service.getGameInstance() == null) {
-				Thread.sleep(100);
-			}
-			Thread.sleep(500); //This really should not be done, but were gonna go with it
+			service.done.await();
 			return new ResponseEntity<Object>(service.getGameInstance(), HttpStatus.OK);
 		} else {
 			return new ResponseEntity<Object>("The game " + startGameInstanceDto.gameId + " username " + startGameInstanceDto.usernameId + " does not exist, so an insance could not be started!", HttpStatus.INTERNAL_SERVER_ERROR);
@@ -111,20 +108,14 @@ public class GameInstanceController {
 				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame);
 				service.start();
 				gameInstances.add(service);
-				while(service.getGameInstance() == null) {
-					Thread.sleep(100);
-				}
-				Thread.sleep(500); //This really should not be done, but were gonna go with it
+				service.done.await();
 				return ResponseEntity.status(HttpStatus.OK).body(service.getGameInstance().getGameInstanceId());
 			} else {
 				GameInstanceService service = context.getBean(GameInstanceService.class);
 				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame);
 				service.start();
 				gameInstances.add(service);
-				while(service.getGameInstance() == null) {
-					Thread.sleep(100);
-				}
-				Thread.sleep(500); //This really should not be done, but were gonna go with it
+				service.done.await();
 				return ResponseEntity.status(HttpStatus.OK).body(service.getGameInstance().getGameInstanceId());
 			}
 		}
