@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +78,8 @@ public class GameInstanceService extends Thread {
 	
 	private PlayerVMService masterPlayerVMService;
 	
+	public CountDownLatch done = new CountDownLatch(1);
+	
 	public void setupVariables(GameDto game, UsernameDto username, boolean debugInstance, boolean archivedGame) {
 		this.game = game;
 		this.username = username;
@@ -106,6 +109,7 @@ public class GameInstanceService extends Thread {
 		this.setName("WLCP-" + game.gameId + "-" + gameInstance.getGameInstanceId());
 		transpiledGame = transpilerFeignClient.transpileGame(game.gameId, archivedGame);
 		masterPlayerVMService = this.StartMasterVM();
+		done.countDown();
 	}
 	
 	public ConnectResponseMessage userConnect(ConnectRequestMessage connect) {
