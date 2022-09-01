@@ -94,6 +94,11 @@ public class GameInstanceService extends Thread {
 			for(IMessage message : messages) {
 				handleMessage(message);
 			}
+			try {
+				Thread.sleep(17);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
