@@ -270,7 +270,11 @@ public class GameInstanceService extends Thread {
 		List<Map<String, String>> playerUserList = new ArrayList<Map<String, String>>();
 		for(Player player : players) {
 			Map<String, String> map = new HashMap<String, String>();
-			map.put("key", "Team " + (player.teamPlayer.team + 1) + " Player " + (player.teamPlayer.player + 1) + " ( " + player.usernameClientData.username.usernameId + " )");
+			if(player.usernameClientData.username.tempPlayer) {
+				map.put("key", "Team " + (player.teamPlayer.team + 1) + " Player " + (player.teamPlayer.player + 1) + " ( " + player.usernameClientData.username.usernameId + " ) (guest)");
+			} else {
+				map.put("key", "Team " + (player.teamPlayer.team + 1) + " Player " + (player.teamPlayer.player + 1) + " ( " + player.usernameClientData.username.usernameId + " )");
+			}
 			playerUserList.add(map);
 		}
 		return playerUserList;
