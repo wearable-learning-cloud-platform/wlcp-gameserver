@@ -18,3 +18,5 @@ feign:
         readTimeout: 60000
 wlcp-api-url: localhost:8082
 wlcp-transpiler-url: localhost:8083
+security:
+  jwt-token: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIifQ.CFsDr9KnYtLCfXkvDyyDyEUdnu5RPPyFQ32jiKMQ8NsbmTfMwVmIeWO0AJxYs8uyPP4txkvy4sP4T6asVN5cIw

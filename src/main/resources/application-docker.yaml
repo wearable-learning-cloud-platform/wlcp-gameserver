@@ -13,3 +13,5 @@ feign:  client:    config:
         readTimeout: 60000
 wlcp-api-url:
 wlcp-transpiler-url:
+security:
+  jwt-token: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIifQ.CFsDr9KnYtLCfXkvDyyDyEUdnu5RPPyFQ32jiKMQ8NsbmTfMwVmIeWO0AJxYs8uyPP4txkvy4sP4T6asVN5cIw
