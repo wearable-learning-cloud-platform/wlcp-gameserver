@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,7 +32,6 @@ import org.wlcp.wlcpgameserver.dto.messages.PlayerAvaliableMessage;
 import org.wlcp.wlcpgameserver.feignclient.GameFeignClient;
 import org.wlcp.wlcpgameserver.feignclient.UsernameFeignClient;
 import org.wlcp.wlcpgameserver.repository.GameInstanceRepository;
-import org.wlcp.wlcpgameserver.security.SecurityConstants;
 import org.wlcp.wlcpgameserver.service.impl.GameInstanceService;
 
 @Controller
@@ -53,6 +53,9 @@ public class GameInstanceController {
 	@Autowired
 	private SimpMessagingTemplate messageTemplate;
 	
+	@Value("${security.jwt-token}")
+	private String jwtToken;
+	
 	public CopyOnWriteArrayList<GameInstanceService> gameInstances = new CopyOnWriteArrayList<GameInstanceService>();
 	
 	@GetMapping("/gameInstances")
@@ -62,8 +65,8 @@ public class GameInstanceController {
 	
 	@PostMapping("/startGameInstance")
 	public ResponseEntity<Object> startGameInstance(@RequestBody StartGameInstanceDto startGameInstanceDto) throws InterruptedException {
-		GameDto gameDto = gameFeignClient.getGame(startGameInstanceDto.gameId, SecurityConstants.JWT_TOKEN);
-		UsernameDto usernameDto = usernameFeignClient.getUsername(startGameInstanceDto.usernameId, SecurityConstants.JWT_TOKEN);
+		GameDto gameDto = gameFeignClient.getGame(startGameInstanceDto.gameId, jwtToken);
+		UsernameDto usernameDto = usernameFeignClient.getUsername(startGameInstanceDto.usernameId, jwtToken);
 		if(gameDto != null && usernameDto != null) {
 			GameInstanceService service = context.getBean(GameInstanceService.class);
 			service.setupVariables(gameDto, usernameDto, false, false);
@@ -80,11 +83,11 @@ public class GameInstanceController {
 	public ResponseEntity<Integer> startDebugGameInstance(@RequestBody StartDebugGameInstanceDto startDebugGameInstance) throws InterruptedException {
 		GameDto gameDto = null;
 		if(startDebugGameInstance.archivedGame) {
-			gameDto = gameFeignClient.getArchivedGame(startDebugGameInstance.gameId, SecurityConstants.JWT_TOKEN);
+			gameDto = gameFeignClient.getArchivedGame(startDebugGameInstance.gameId, jwtToken);
 		} else {
-			gameDto = gameFeignClient.getGame(startDebugGameInstance.gameId, SecurityConstants.JWT_TOKEN);
+			gameDto = gameFeignClient.getGame(startDebugGameInstance.gameId, jwtToken);
 		}
-		UsernameDto usernameDto = usernameFeignClient.getUsername(startDebugGameInstance.usernameId, SecurityConstants.JWT_TOKEN);
+		UsernameDto usernameDto = usernameFeignClient.getUsername(startDebugGameInstance.usernameId, jwtToken);
 		if(gameDto != null && usernameDto != null) {
 			List<GameInstance> foundGameInstances = null;
 			if(startDebugGameInstance.restart == false) {
@@ -153,7 +156,7 @@ public class GameInstanceController {
 	
 	@GetMapping("/checkDebugInstanceRunning/{usernameId}")
 	public ResponseEntity<Boolean> checkDebugInstanceRunning(@PathVariable String usernameId)  {
-		UsernameDto usernameDto = usernameFeignClient.getUsername(usernameId, SecurityConstants.JWT_TOKEN);
+		UsernameDto usernameDto = usernameFeignClient.getUsername(usernameId, jwtToken);
 		if(usernameDto != null) {
 			if(gameInstanceRepository.findByUsernameIdAndDebugInstance(usernameDto.usernameId, true).size() > 0) {
 				return ResponseEntity.status(HttpStatus.OK).body(true);

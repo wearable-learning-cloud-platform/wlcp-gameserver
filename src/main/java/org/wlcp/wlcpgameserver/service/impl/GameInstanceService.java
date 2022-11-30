@@ -12,6 +12,7 @@ import java.util.concurrent.CountDownLatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -39,7 +40,6 @@ import org.wlcp.wlcpgameserver.model.Player;
 import org.wlcp.wlcpgameserver.model.TeamPlayer;
 import org.wlcp.wlcpgameserver.model.UsernameClientData;
 import org.wlcp.wlcpgameserver.repository.GameInstanceRepository;
-import org.wlcp.wlcpgameserver.security.SecurityConstants;
 
 @Controller
 @RequestMapping("/controllers")
@@ -62,6 +62,9 @@ public class GameInstanceService extends Thread {
 	
 	@Autowired
 	private ApplicationContext context;
+	
+	@Value("${security.jwt-token}")
+	private String jwtToken;
 	
 	private GameDto game;
 	private UsernameDto username;
@@ -120,7 +123,7 @@ public class GameInstanceService extends Thread {
 	public ConnectResponseMessage userConnect(ConnectRequestMessage connect) {
 		
 		//Get the user from the db
-		UsernameDto usernameDto = usernameFeignClient.getUsername(connect.usernameId, SecurityConstants.JWT_TOKEN);
+		UsernameDto usernameDto = usernameFeignClient.getUsername(connect.usernameId, jwtToken);
 		
 		if(usernameDto == null) {
 			usernameDto = new UsernameDto();
