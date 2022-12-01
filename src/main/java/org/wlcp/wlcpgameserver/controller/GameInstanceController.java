@@ -63,6 +63,11 @@ public class GameInstanceController {
 		return new ResponseEntity<List<GameInstance>>(gameInstanceRepository.findByUsernameIdAndDebugInstance(usernameId, false), HttpStatus.OK);
 	}
 	
+	@GetMapping("/allGameInstances")
+	public ResponseEntity<List<GameInstance>> getAllGameInstances() {
+		return new ResponseEntity<List<GameInstance>>(gameInstanceRepository.findAll(), HttpStatus.OK);
+	}
+	
 	@PostMapping("/startGameInstance")
 	public ResponseEntity<Object> startGameInstance(@RequestBody StartGameInstanceDto startGameInstanceDto) throws InterruptedException {
 		GameDto gameDto = gameFeignClient.getGame(startGameInstanceDto.gameId, jwtToken);
