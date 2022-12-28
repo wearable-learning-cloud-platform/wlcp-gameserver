@@ -28,6 +28,10 @@ import org.wlcp.wlcpgameserver.dto.messages.PlayVideoMessage;
 import org.wlcp.wlcpgameserver.dto.messages.SequenceButtonPressMessage;
 import org.wlcp.wlcpgameserver.dto.messages.SingleButtonPressMessage;
 import org.wlcp.wlcpgameserver.dto.messages.TimerDurationMessage;
+import org.wlcp.wlcpgameserver.dto.messages.combined.CombinedMessage;
+import org.wlcp.wlcpgameserver.dto.messages.combined.InputMessage;
+import org.wlcp.wlcpgameserver.dto.messages.combined.MessageType;
+import org.wlcp.wlcpgameserver.dto.messages.combined.OutputMessage;
 import org.wlcp.wlcpgameserver.model.Player;
 
 import jdk.nashorn.api.scripting.JSObject;
@@ -52,6 +56,7 @@ public class PlayerVMService extends Thread {
 	private int timerElapsedNextState = 0;
 	private IMessage blockMessage = null;
 	private IMessage lastSentPacket = null;
+	private CombinedMessage combinedMessage = new CombinedMessage();
 	private Semaphore masterGlobalVariableMutex = new Semaphore(1);
 	
 	public void setupVariables(GameInstanceService gameInstanceService, Player player, String transpiledGame) {
@@ -150,12 +155,17 @@ public class PlayerVMService extends Thread {
 	public void NoState() {
 		NoStateMessage msg = new NoStateMessage();
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/noState/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+		combinedMessage.outputMessages.add(new OutputMessage(MessageType.NO_STATE, msg));
+		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
+		combinedMessage.outputMessages.clear();
+		combinedMessage.inputMessages.clear();
 	}
 	
 	public void DisplayText(String text) {
 		DisplayTextMessage msg = new DisplayTextMessage();
 		msg.displayText = text;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/displayText/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+		combinedMessage.outputMessages.add(new OutputMessage(MessageType.DISPLAY_TEXT, msg));
 	}
 	
 	public void DisplayPhoto(String url, int scale) {
@@ -163,24 +173,30 @@ public class PlayerVMService extends Thread {
 		msg.url = url;
 		msg.scale = scale;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/displayPhoto/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
-		
+		combinedMessage.outputMessages.add(new OutputMessage(MessageType.DISPLAY_PHOTO, msg));
 	}
 	
 	public void PlaySound(String url) {
 		PlaySoundMessage msg = new PlaySoundMessage();
 		msg.url = url;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/playSound/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+		combinedMessage.outputMessages.add(new OutputMessage(MessageType.PLAY_SOUND, msg));
 	}
 	
 	public void PlayVideo(String url) {
 		PlayVideoMessage msg = new PlayVideoMessage();
 		msg.url = url;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/playVideo/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+		combinedMessage.outputMessages.add(new OutputMessage(MessageType.PLAY_VIDEO, msg));
 	}
 	
 	public void NoTransition() {
 		NoTransitionMessage msg = new NoTransitionMessage();
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/noTransition/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+		combinedMessage.inputMessages.add(new InputMessage(MessageType.NO_TRANSITION, msg));
+		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
+		combinedMessage.outputMessages.clear();
+		combinedMessage.inputMessages.clear();
 	}
 
 	public int SingleButtonPress(String[] buttons, int[] transitions, String[] labels) throws ScriptException {
@@ -193,6 +209,10 @@ public class PlayerVMService extends Thread {
 			msg.label4 = labels[3];
 			lastSentPacket = msg;
 			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/singleButtonPressRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+			combinedMessage.inputMessages.add(new InputMessage(MessageType.SINGLE_BUTTON_PRESS, msg));
+			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
+			combinedMessage.outputMessages.clear();
+			combinedMessage.inputMessages.clear();
 			int state;
 			while((state = block()) == -2) {}
 			if(state != -2 && state != -1) { return state; }
@@ -211,6 +231,10 @@ public class PlayerVMService extends Thread {
 			SequenceButtonPressMessage msg = new SequenceButtonPressMessage();
 			lastSentPacket = msg;
 			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/sequenceButtonPressRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+			combinedMessage.inputMessages.add(new InputMessage(MessageType.SEQUENCE_BUTTON_PRESS, msg));
+			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
+			combinedMessage.outputMessages.clear();
+			combinedMessage.inputMessages.clear();
 			int state;
 			while((state = block()) == -2) {}
 			if(state != -2 && state != -1) { return state; }
@@ -234,6 +258,10 @@ public class PlayerVMService extends Thread {
 			KeyboardInputMessage msg = new KeyboardInputMessage();
 			lastSentPacket = msg;
 			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/keyboardInputRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+			combinedMessage.inputMessages.add(new InputMessage(MessageType.KEYBOARD_INPUT, msg));
+			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
+			combinedMessage.outputMessages.clear();
+			combinedMessage.inputMessages.clear();
 			int state;
 			while((state = block()) == -2) {}
 			if(state != -2 && state != -1) { return state; }
@@ -257,6 +285,10 @@ public class PlayerVMService extends Thread {
 			EmptyMessage msg = new EmptyMessage();
 			lastSentPacket = msg;
 			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/randomInputRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+			combinedMessage.inputMessages.add(new InputMessage(MessageType.RANDOM, msg));
+			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
+			combinedMessage.outputMessages.clear();
+			combinedMessage.inputMessages.clear();
 			int state;
 			while((state = block()) == -2) {}
 			if(state != -2 && state != -1) { return state; }
@@ -272,6 +304,10 @@ public class PlayerVMService extends Thread {
 		msg.duration = delay;
 		lastSentPacket = msg;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/timerDurationRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+		combinedMessage.inputMessages.add(new InputMessage(MessageType.TIMER_DURATION, msg));
+		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
+		combinedMessage.outputMessages.clear();
+		combinedMessage.inputMessages.clear();
 		Thread.sleep(delay * 1000);
 		block = false;
 		return;
@@ -283,6 +319,7 @@ public class PlayerVMService extends Thread {
 		msg.isTimer = true;
 		lastSentPacket = msg;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/timerDurationRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
+		combinedMessage.inputMessages.add(new InputMessage(MessageType.TIMER_DURATION, msg));
 		this.timerElapsedNextState = nextState;
 		Timer timer = new Timer("Timer");
 		timer.schedule(new TimerTask() {
