@@ -17,10 +17,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpAttributesContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.wlcp.wlcpgameserver.controller.GameInstanceController;
+import org.wlcp.wlcpgameserver.datamodel.enums.ConnectionStatus;
 import org.wlcp.wlcpgameserver.datamodel.master.GameInstance;
 import org.wlcp.wlcpgameserver.datamodel.master.GameInstancePlayer;
 import org.wlcp.wlcpgameserver.dto.GameDto;
@@ -135,6 +137,16 @@ public class GameInstanceService extends Thread {
 		if(!debugInstance) {
 			for(Player player : players) {
 				if(player.usernameClientData.username.usernameId.equals(usernameDto.usernameId)) {
+					for(GameInstancePlayer gameInstancePlayer : gameInstance.getPlayers()) {
+						if(gameInstancePlayer.getUsernameId().equals(player.usernameClientData.username.usernameId)) {
+							gameInstancePlayer.setSessionId(SimpAttributesContextHolder.currentAttributes().getSessionId());
+							gameInstancePlayer.setWebSocketConnectionStatus(ConnectionStatus.CONNECTED);
+							gameInstancePlayer.setGameInstanceConnectionStatus(ConnectionStatus.CONNECTED);
+							gameInstanceRepository.save(gameInstance);
+							player.usernameClientData.sessionId = gameInstancePlayer.getSessionId();
+							break;
+						}
+					}
 					//User already exists in the game, maybe they are trying to reconnect?
 					player.playerVM.reconnect();
 					ConnectResponseMessage msg = new ConnectResponseMessage();
@@ -157,7 +169,7 @@ public class GameInstanceService extends Thread {
 		}
 		
 		//They passed our tests, they can join
-		UsernameClientData usernameClientData = new UsernameClientData(usernameDto);
+		UsernameClientData usernameClientData = new UsernameClientData(usernameDto, SimpAttributesContextHolder.currentAttributes().getSessionId());
 		
 		//Get the team palyer
 		TeamPlayer teamPlayer = new TeamPlayer(connect.team, connect.player);
@@ -172,7 +184,7 @@ public class GameInstanceService extends Thread {
 		//Log the event
 		logger.info("user " + player.usernameClientData.username.usernameId + " joined" + " playing the game" + "\"" + game.gameId + "\"");
 		
-		gameInstance.getPlayers().add(new GameInstancePlayer(usernameDto.tempPlayer, usernameDto.usernameId));
+		gameInstance.getPlayers().add(new GameInstancePlayer(usernameDto.tempPlayer, usernameDto.usernameId, usernameClientData.sessionId, ConnectionStatus.CONNECTED, ConnectionStatus.CONNECTED));
 		gameInstance = gameInstanceRepository.save(gameInstance);
 		
 		ConnectResponseMessage msg = new ConnectResponseMessage();
@@ -204,7 +216,7 @@ public class GameInstanceService extends Thread {
 	private PlayerVMService StartMasterVM() {
 		UsernameDto usernameDto = new UsernameDto();
 		usernameDto.usernameId = "MasterVM";
-		Player player = new Player(new UsernameClientData(usernameDto), new TeamPlayer(-1, -1));
+		Player player = new Player(new UsernameClientData(usernameDto, null), new TeamPlayer(-1, -1));
 
 		PlayerVMService service = context.getBean(PlayerVMService.class);
 		service.setupVariables(this, player, transpiledGame.replace("running : true", "running : false"));
@@ -337,6 +349,16 @@ public class GameInstanceService extends Thread {
 			}
 		}
 		return "";
+	}
+	
+	public Player searchPlayers(String sessionId) {
+		for(Player player : players) {
+			if(player.usernameClientData.sessionId.equals(sessionId)) {
+				return player;
+			}
+			
+		}
+		return null;
 	}
 	
 	public void addMessage(IMessage message) {
