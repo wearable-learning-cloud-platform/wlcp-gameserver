@@ -144,6 +144,7 @@ public class GameInstanceService extends Thread {
 							gameInstancePlayer.setGameInstanceConnectionStatus(ConnectionStatus.CONNECTED);
 							gameInstanceRepository.save(gameInstance);
 							player.usernameClientData.sessionId = gameInstancePlayer.getSessionId();
+							logger.info("WebSocket Reconnection Made Session Id: " + gameInstancePlayer.getSessionId());
 							break;
 						}
 					}
@@ -182,7 +183,7 @@ public class GameInstanceService extends Thread {
 		players.add(player);
 		
 		//Log the event
-		logger.info("user " + player.usernameClientData.username.usernameId + " joined" + " playing the game" + "\"" + game.gameId + "\"");
+		logger.info("user " + player.usernameClientData.username.usernameId + " joined" + " playing the game" + "\"" + game.gameId + "\"" + " with SessionID: " + "\"" + usernameClientData.sessionId + "\"");
 		
 		gameInstance.getPlayers().add(new GameInstancePlayer(usernameDto.tempPlayer, usernameDto.usernameId, usernameClientData.sessionId, ConnectionStatus.CONNECTED, ConnectionStatus.CONNECTED));
 		gameInstance = gameInstanceRepository.save(gameInstance);
