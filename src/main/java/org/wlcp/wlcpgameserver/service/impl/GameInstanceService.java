@@ -199,9 +199,17 @@ public class GameInstanceService extends Thread {
 		
 		for(Player player : players) {
 			if(player.teamPlayer.team == team && player.teamPlayer.player == playerNum) {
+				for(GameInstancePlayer gameInstancePlayer : gameInstance.getPlayers()) {
+					if(gameInstancePlayer.getUsernameId().equals(player.usernameClientData.username.usernameId)) {
+						gameInstancePlayer.setWebSocketConnectionStatus(ConnectionStatus.DISCONNECTED);
+						gameInstancePlayer.setGameInstanceConnectionStatus(ConnectionStatus.DISCONNECTED);
+						gameInstanceRepository.save(gameInstance);
+					}
+					
+				}
 				
 				//Log the event
-				logger.info("User " + player.usernameClientData.username.usernameId+ " is disconnecting...");
+				logger.info("User " + player.usernameClientData.username.usernameId+ " is disconnecting... with SessionID: " + SimpAttributesContextHolder.currentAttributes().getSessionId());
 				
 				//Stop the VM's thread
 				player.playerVM.shutdown();
