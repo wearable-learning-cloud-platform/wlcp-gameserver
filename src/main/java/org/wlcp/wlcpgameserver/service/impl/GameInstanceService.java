@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.wlcp.wlcpgameserver.controller.GameInstanceController;
 import org.wlcp.wlcpgameserver.datamodel.enums.ConnectionStatus;
+import org.wlcp.wlcpgameserver.datamodel.enums.GameStatus;
 import org.wlcp.wlcpgameserver.datamodel.master.GameInstance;
 import org.wlcp.wlcpgameserver.datamodel.master.GameInstancePlayer;
 import org.wlcp.wlcpgameserver.dto.GameDto;
@@ -185,7 +186,7 @@ public class GameInstanceService extends Thread {
 		//Log the event
 		logger.info("user " + player.usernameClientData.username.usernameId + " joined" + " playing the game" + "\"" + game.gameId + "\"" + " with SessionID: " + "\"" + usernameClientData.sessionId + "\"");
 		
-		gameInstance.getPlayers().add(new GameInstancePlayer(usernameDto.tempPlayer, usernameDto.usernameId, usernameClientData.sessionId, ConnectionStatus.CONNECTED, ConnectionStatus.CONNECTED));
+		gameInstance.getPlayers().add(new GameInstancePlayer(usernameDto.tempPlayer, usernameDto.usernameId, usernameClientData.sessionId, ConnectionStatus.CONNECTED, ConnectionStatus.CONNECTED, GameStatus.GAME_RUNNING));
 		gameInstance = gameInstanceRepository.save(gameInstance);
 		
 		ConnectResponseMessage msg = new ConnectResponseMessage();

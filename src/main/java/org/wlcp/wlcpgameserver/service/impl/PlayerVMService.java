@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.wlcp.wlcpgameserver.datamodel.enums.GameStatus;
+import org.wlcp.wlcpgameserver.datamodel.master.GameInstancePlayer;
 import org.wlcp.wlcpgameserver.dto.messages.DisplayPhotoMessage;
 import org.wlcp.wlcpgameserver.dto.messages.DisplayTextMessage;
 import org.wlcp.wlcpgameserver.dto.messages.EmptyMessage;
@@ -33,6 +35,7 @@ import org.wlcp.wlcpgameserver.dto.messages.combined.InputMessage;
 import org.wlcp.wlcpgameserver.dto.messages.combined.MessageType;
 import org.wlcp.wlcpgameserver.dto.messages.combined.OutputMessage;
 import org.wlcp.wlcpgameserver.model.Player;
+import org.wlcp.wlcpgameserver.repository.GameInstanceRepository;
 
 import jdk.nashorn.api.scripting.JSObject;
 
@@ -44,6 +47,9 @@ public class PlayerVMService extends Thread {
 	
 	@Autowired
 	SimpMessagingTemplate messageTemplate;
+	
+	@Autowired
+	private GameInstanceRepository gameInstanceRepository;
 	
 	private GameInstanceService gameInstanceService;
 	private Player player;
@@ -71,6 +77,7 @@ public class PlayerVMService extends Thread {
 	public void run() {
 		try {
 			startVM();
+			endOfGame();
 		} catch (NoSuchMethodException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -88,6 +95,16 @@ public class PlayerVMService extends Thread {
 		Invocable invocable = (Invocable) scriptEngine;
 		invocable.invokeFunction("SetGameVariables", gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team + 1, player.teamPlayer.player + 1, this);
 		invocable.invokeMethod(json, "start");
+	}
+	
+	private void endOfGame() {
+		for(GameInstancePlayer player : gameInstanceService.getGameInstance().getPlayers()) {
+			if(player.getUsernameId().equals(this.player.usernameClientData.username.usernameId)) {
+				player.setGameStatus(GameStatus.GAME_ENDED);
+				gameInstanceRepository.save(gameInstanceService.getGameInstance());
+				break;
+			}
+		}
 	}
 	
 	public void shutdown() {
