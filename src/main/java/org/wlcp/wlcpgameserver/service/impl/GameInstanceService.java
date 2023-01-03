@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 
@@ -86,6 +88,10 @@ public class GameInstanceService extends Thread {
 	
 	public CountDownLatch done = new CountDownLatch(1);
 	
+	private Timer shutdownTimer = null;
+	private long shutdownDelay = 300000; //5 minutes * 60 seconds * 1000 miliseconds
+	private TimerTask shutdownTimerTask = null;
+	
 	public void setupVariables(GameDto game, UsernameDto username, boolean debugInstance, boolean archivedGame) {
 		this.game = game;
 		this.username = username;
@@ -120,7 +126,26 @@ public class GameInstanceService extends Thread {
 		this.setName("WLCP-" + game.gameId + "-" + gameInstance.getGameInstanceId());
 		transpiledGame = transpilerFeignClient.transpileGame(game.gameId, archivedGame);
 		masterPlayerVMService = this.StartMasterVM();
+		setupShutdownTimer();
 		done.countDown();
+	}
+	
+	private void setupShutdownTimer() {
+		shutdownTimer = new Timer("ShutdownTimer-" + gameInstance.getGameId() + "-" + gameInstance.getGameInstanceId());
+		shutdownTimerTask = new TimerTask() {
+	        public void run() {
+	        	for(GameInstancePlayer player : gameInstance.getPlayers()) {
+	    			if(player.getWebSocketConnectionStatus().equals(ConnectionStatus.CONNECTED)) {
+	    				logger.info("Shutdown Timer has elapsed. Players are still connected. Game instance will continue to run.");
+	    				return;
+	    			}
+	    		}
+	        	logger.info("Shutdown Timer has elapsed. No players are connected. Game instance will shutdown.");
+	        	shutdownTimer.cancel();
+	    		shutdown();
+	        }
+	    };
+		shutdownTimer.schedule(shutdownTimerTask, shutdownDelay, shutdownDelay);
 	}
 	
 	public ConnectResponseMessage userConnect(ConnectRequestMessage connect) {
