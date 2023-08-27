@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 
@@ -17,10 +19,13 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpAttributesContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.wlcp.wlcpgameserver.controller.GameInstanceController;
+import org.wlcp.wlcpgameserver.datamodel.enums.ConnectionStatus;
+import org.wlcp.wlcpgameserver.datamodel.enums.GameStatus;
 import org.wlcp.wlcpgameserver.datamodel.master.GameInstance;
 import org.wlcp.wlcpgameserver.datamodel.master.GameInstancePlayer;
 import org.wlcp.wlcpgameserver.dto.GameDto;
@@ -83,6 +88,10 @@ public class GameInstanceService extends Thread {
 	
 	public CountDownLatch done = new CountDownLatch(1);
 	
+	private Timer shutdownTimer = null;
+	private long shutdownDelay = 300000; //5 minutes * 60 seconds * 1000 miliseconds
+	private TimerTask shutdownTimerTask = null;
+	
 	public void setupVariables(GameDto game, UsernameDto username, boolean debugInstance, boolean archivedGame) {
 		this.game = game;
 		this.username = username;
@@ -117,7 +126,26 @@ public class GameInstanceService extends Thread {
 		this.setName("WLCP-" + game.gameId + "-" + gameInstance.getGameInstanceId());
 		transpiledGame = transpilerFeignClient.transpileGame(game.gameId, archivedGame);
 		masterPlayerVMService = this.StartMasterVM();
+		setupShutdownTimer();
 		done.countDown();
+	}
+	
+	private void setupShutdownTimer() {
+		shutdownTimer = new Timer("ShutdownTimer-" + gameInstance.getGameId() + "-" + gameInstance.getGameInstanceId());
+		shutdownTimerTask = new TimerTask() {
+	        public void run() {
+	        	for(GameInstancePlayer player : gameInstance.getPlayers()) {
+	    			if(player.getWebSocketConnectionStatus().equals(ConnectionStatus.CONNECTED)) {
+	    				logger.info("Shutdown Timer has elapsed. Players are still connected. Game instance will continue to run.");
+	    				return;
+	    			}
+	    		}
+	        	logger.info("Shutdown Timer has elapsed. No players are connected. Game instance will shutdown.");
+	        	shutdownTimer.cancel();
+	    		shutdown();
+	        }
+	    };
+		shutdownTimer.schedule(shutdownTimerTask, shutdownDelay, shutdownDelay);
 	}
 	
 	public ConnectResponseMessage userConnect(ConnectRequestMessage connect) {
@@ -135,6 +163,17 @@ public class GameInstanceService extends Thread {
 		if(!debugInstance) {
 			for(Player player : players) {
 				if(player.usernameClientData.username.usernameId.equals(usernameDto.usernameId)) {
+					for(GameInstancePlayer gameInstancePlayer : gameInstance.getPlayers()) {
+						if(gameInstancePlayer.getUsernameId().equals(player.usernameClientData.username.usernameId)) {
+							gameInstancePlayer.setSessionId(SimpAttributesContextHolder.currentAttributes().getSessionId());
+							gameInstancePlayer.setWebSocketConnectionStatus(ConnectionStatus.CONNECTED);
+							gameInstancePlayer.setGameInstanceConnectionStatus(ConnectionStatus.CONNECTED);
+							gameInstanceRepository.save(gameInstance);
+							player.usernameClientData.sessionId = gameInstancePlayer.getSessionId();
+							logger.info("WebSocket Reconnection Made Session Id: " + gameInstancePlayer.getSessionId());
+							break;
+						}
+					}
 					//User already exists in the game, maybe they are trying to reconnect?
 					player.playerVM.reconnect();
 					ConnectResponseMessage msg = new ConnectResponseMessage();
@@ -157,7 +196,7 @@ public class GameInstanceService extends Thread {
 		}
 		
 		//They passed our tests, they can join
-		UsernameClientData usernameClientData = new UsernameClientData(usernameDto);
+		UsernameClientData usernameClientData = new UsernameClientData(usernameDto, SimpAttributesContextHolder.currentAttributes().getSessionId());
 		
 		//Get the team palyer
 		TeamPlayer teamPlayer = new TeamPlayer(connect.team, connect.player);
@@ -170,9 +209,9 @@ public class GameInstanceService extends Thread {
 		players.add(player);
 		
 		//Log the event
-		logger.info("user " + player.usernameClientData.username.usernameId + " joined" + " playing the game" + "\"" + game.gameId + "\"");
+		logger.info("user " + player.usernameClientData.username.usernameId + " joined" + " playing the game" + "\"" + game.gameId + "\"" + " with SessionID: " + "\"" + usernameClientData.sessionId + "\"");
 		
-		gameInstance.getPlayers().add(new GameInstancePlayer(usernameDto.tempPlayer, usernameDto.usernameId));
+		gameInstance.getPlayers().add(new GameInstancePlayer(usernameDto.tempPlayer, usernameDto.usernameId, usernameClientData.sessionId, ConnectionStatus.CONNECTED, ConnectionStatus.CONNECTED, GameStatus.GAME_RUNNING));
 		gameInstance = gameInstanceRepository.save(gameInstance);
 		
 		ConnectResponseMessage msg = new ConnectResponseMessage();
@@ -186,9 +225,17 @@ public class GameInstanceService extends Thread {
 		
 		for(Player player : players) {
 			if(player.teamPlayer.team == team && player.teamPlayer.player == playerNum) {
+				for(GameInstancePlayer gameInstancePlayer : gameInstance.getPlayers()) {
+					if(gameInstancePlayer.getUsernameId().equals(player.usernameClientData.username.usernameId)) {
+						gameInstancePlayer.setWebSocketConnectionStatus(ConnectionStatus.DISCONNECTED);
+						gameInstancePlayer.setGameInstanceConnectionStatus(ConnectionStatus.DISCONNECTED);
+						gameInstanceRepository.save(gameInstance);
+					}
+					
+				}
 				
 				//Log the event
-				logger.info("User " + player.usernameClientData.username.usernameId+ " is disconnecting...");
+				logger.info("User " + player.usernameClientData.username.usernameId+ " is disconnecting... with SessionID: " + SimpAttributesContextHolder.currentAttributes().getSessionId());
 				
 				//Stop the VM's thread
 				player.playerVM.shutdown();
@@ -204,7 +251,7 @@ public class GameInstanceService extends Thread {
 	private PlayerVMService StartMasterVM() {
 		UsernameDto usernameDto = new UsernameDto();
 		usernameDto.usernameId = "MasterVM";
-		Player player = new Player(new UsernameClientData(usernameDto), new TeamPlayer(-1, -1));
+		Player player = new Player(new UsernameClientData(usernameDto, null), new TeamPlayer(-1, -1));
 
 		PlayerVMService service = context.getBean(PlayerVMService.class);
 		service.setupVariables(this, player, transpiledGame.replace("running : true", "running : false"));
@@ -337,6 +384,16 @@ public class GameInstanceService extends Thread {
 			}
 		}
 		return "";
+	}
+	
+	public Player searchPlayers(String sessionId) {
+		for(Player player : players) {
+			if(player.usernameClientData.sessionId.equals(sessionId)) {
+				return player;
+			}
+			
+		}
+		return null;
 	}
 	
 	public void addMessage(IMessage message) {

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.wlcp.wlcpgameserver.datamodel.master.GameInstance;
+import org.wlcp.wlcpgameserver.datamodel.master.GameInstancePlayer;
 import org.wlcp.wlcpgameserver.dto.GameDto;
 import org.wlcp.wlcpgameserver.dto.StartDebugGameInstanceDto;
 import org.wlcp.wlcpgameserver.dto.StartGameInstanceDto;
@@ -31,6 +32,7 @@ import org.wlcp.wlcpgameserver.dto.messages.IMessage;
 import org.wlcp.wlcpgameserver.dto.messages.PlayerAvaliableMessage;
 import org.wlcp.wlcpgameserver.feignclient.GameFeignClient;
 import org.wlcp.wlcpgameserver.feignclient.UsernameFeignClient;
+import org.wlcp.wlcpgameserver.model.Player;
 import org.wlcp.wlcpgameserver.repository.GameInstanceRepository;
 import org.wlcp.wlcpgameserver.service.impl.GameInstanceService;
 
@@ -61,6 +63,11 @@ public class GameInstanceController {
 	@GetMapping("/gameInstances")
 	public ResponseEntity<List<GameInstance>> getGameInstances(@RequestParam("usernameId") String usernameId) {
 		return new ResponseEntity<List<GameInstance>>(gameInstanceRepository.findByUsernameIdAndDebugInstance(usernameId, false), HttpStatus.OK);
+	}
+	
+	@GetMapping("/allGameInstances")
+	public ResponseEntity<List<GameInstance>> getAllGameInstances() {
+		return new ResponseEntity<List<GameInstance>>(gameInstanceRepository.findAll(), HttpStatus.OK);
 	}
 	
 	@PostMapping("/startGameInstance")
@@ -148,6 +155,15 @@ public class GameInstanceController {
 		usernameDto.usernameId = usernameId;
 		for(GameInstanceService gameInstance : gameInstances) {
 			if(gameInstance.getGameInstance().getGameInstanceId().equals(gameInstanceId)) {
+				for(GameInstancePlayer player : gameInstance.getGameInstance().getPlayers()) {
+					if(player.getUsernameId().equals(usernameDto.usernameId)) {
+						List<PlayerAvaliableMessage> msgs = gameInstance.getTeamsAndPlayers(usernameId);
+						for(PlayerAvaliableMessage msg : msgs) {
+							msg.type = PlayerAvaliableMessage.Type.USERNAME_EXISTS;
+						}
+						return ResponseEntity.status(HttpStatus.OK).body(msgs);
+					}
+				}
 				return ResponseEntity.status(HttpStatus.OK).body(gameInstance.getTeamsAndPlayers(usernameId));
 			}
 		}
