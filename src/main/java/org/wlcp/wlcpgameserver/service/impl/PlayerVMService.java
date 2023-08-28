@@ -34,8 +34,14 @@ import org.wlcp.wlcpgameserver.dto.messages.combined.CombinedMessage;
 import org.wlcp.wlcpgameserver.dto.messages.combined.InputMessage;
 import org.wlcp.wlcpgameserver.dto.messages.combined.MessageType;
 import org.wlcp.wlcpgameserver.dto.messages.combined.OutputMessage;
+import org.wlcp.wlcpgameserver.feignclient.dto.LogEventGamePlayerCommunicationDto.DataDirection;
+import org.wlcp.wlcpgameserver.feignclient.dto.LogEventGamePlayerCommunicationDto.Input;
+import org.wlcp.wlcpgameserver.feignclient.dto.LogEventGamePlayerCommunicationDto.Output;
+import org.wlcp.wlcpgameserver.feignclient.dto.LogEventGamePlayerServerEventDto.Event;
+import org.wlcp.wlcpgameserver.feignclient.dto.LogEventGamePlayerServerEventDto.Type;
 import org.wlcp.wlcpgameserver.model.Player;
 import org.wlcp.wlcpgameserver.repository.GameInstanceRepository;
+import org.wlcp.wlcpgameserver.service.MetricsService;
 
 import jdk.nashorn.api.scripting.JSObject;
 
@@ -50,6 +56,9 @@ public class PlayerVMService extends Thread {
 	
 	@Autowired
 	private GameInstanceRepository gameInstanceRepository;
+	
+	@Autowired
+	private MetricsService metricsService;
 	
 	private GameInstanceService gameInstanceService;
 	private Player player;
@@ -102,6 +111,7 @@ public class PlayerVMService extends Thread {
 			if(player.getUsernameId().equals(this.player.usernameClientData.username.usernameId)) {
 				player.setGameStatus(GameStatus.GAME_ENDED);
 				gameInstanceRepository.save(gameInstanceService.getGameInstance());
+				messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/gameEnded/" + this.player.usernameClientData.username.usernameId + "/" + this.player.teamPlayer.team + "/" + this.player.teamPlayer.player,  "{}");
 				break;
 			}
 		}
@@ -146,6 +156,7 @@ public class PlayerVMService extends Thread {
 	}
 	
 	public void unblock(IMessage message) {
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.TRANSITION, Event.EXIT, scriptEngine);
 		if(message == null || lastSentPacket == null) { block = false; blockMessage = null; return;}
 		if(message.getClass().equals(lastSentPacket.getClass())) {
 			block = false;
@@ -170,53 +181,76 @@ public class PlayerVMService extends Thread {
 	}
 	
 	public void NoState() {
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.STATE, Event.ENTER, scriptEngine);
 		NoStateMessage msg = new NoStateMessage();
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/noState/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 		combinedMessage.outputMessages.add(new OutputMessage(MessageType.NO_STATE, msg));
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
 		combinedMessage.outputMessages.clear();
 		combinedMessage.inputMessages.clear();
+		metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.NONE, Input.NONE, "No State");
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.STATE, Event.EXIT, scriptEngine);
 	}
 	
-	public void DisplayText(String text) {
+	public void DisplayText(String text) throws ScriptException {
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.STATE, Event.ENTER, scriptEngine);
 		DisplayTextMessage msg = new DisplayTextMessage();
 		msg.displayText = text;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/displayText/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 		combinedMessage.outputMessages.add(new OutputMessage(MessageType.DISPLAY_TEXT, msg));
+		metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.DISPLAY_TEXT, Input.NONE, MetricsService.convertMessage(msg));
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.STATE, Event.EXIT, scriptEngine);
 	}
 	
 	public void DisplayPhoto(String url, int scale) {
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.STATE, Event.ENTER, scriptEngine);
 		DisplayPhotoMessage msg = new DisplayPhotoMessage();
 		msg.url = url;
 		msg.scale = scale;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/displayPhoto/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 		combinedMessage.outputMessages.add(new OutputMessage(MessageType.DISPLAY_PHOTO, msg));
+		metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.DISPLAY_PHOTO, Input.NONE, MetricsService.convertMessage(msg));
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.STATE, Event.EXIT, scriptEngine);
 	}
 	
 	public void PlaySound(String url) {
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.STATE, Event.ENTER, scriptEngine);
 		PlaySoundMessage msg = new PlaySoundMessage();
 		msg.url = url;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/playSound/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 		combinedMessage.outputMessages.add(new OutputMessage(MessageType.PLAY_SOUND, msg));
-	}
+		metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.PLAY_SOUND, Input.NONE, MetricsService.convertMessage(msg));
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.STATE, Event.EXIT, scriptEngine);
+	} 
 	
 	public void PlayVideo(String url) {
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.STATE, Event.ENTER, scriptEngine);
 		PlayVideoMessage msg = new PlayVideoMessage();
 		msg.url = url;
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/playVideo/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 		combinedMessage.outputMessages.add(new OutputMessage(MessageType.PLAY_VIDEO, msg));
+		metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.PLAY_VIDEO, Input.NONE, MetricsService.convertMessage(msg));
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.STATE, Event.EXIT, scriptEngine);
 	}
+		
 	
 	public void NoTransition() {
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.TRANSITION, Event.ENTER, scriptEngine);
 		NoTransitionMessage msg = new NoTransitionMessage();
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/noTransition/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 		combinedMessage.inputMessages.add(new InputMessage(MessageType.NO_TRANSITION, msg));
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
 		combinedMessage.outputMessages.clear();
 		combinedMessage.inputMessages.clear();
+		try {
+			metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.NONE, Input.NONE, "No Transition");
+			metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.TRANSITION, Event.EXIT, scriptEngine);
+		} catch (Exception e) {
+			
+		}
 	}
 
-	public int SingleButtonPress(String[] buttons, int[] transitions, String[] labels) throws ScriptException {
+	public int SingleButtonPress(String[] buttons, int[] transitions, String[] labels) {
 		while(true) {
 			block = true;
 			SingleButtonPressMessage msg = new SingleButtonPressMessage();
@@ -230,6 +264,8 @@ public class PlayerVMService extends Thread {
 			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
 			combinedMessage.outputMessages.clear();
 			combinedMessage.inputMessages.clear();
+			metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.NONE, Input.SINGLE_BUTTON_PRESS, MetricsService.convertMessage(msg));
+			metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.TRANSITION, Event.ENTER, scriptEngine);
 			int state;
 			while((state = block()) == -2) {}
 			if(state != -2 && state != -1) { return state; }
@@ -252,6 +288,8 @@ public class PlayerVMService extends Thread {
 			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
 			combinedMessage.outputMessages.clear();
 			combinedMessage.inputMessages.clear();
+			metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.NONE, Input.SEQUENCE_BUTTON_PRESS, MetricsService.convertMessage(msg));
+			metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.TRANSITION, Event.ENTER, scriptEngine);
 			int state;
 			while((state = block()) == -2) {}
 			if(state != -2 && state != -1) { return state; }
@@ -279,6 +317,8 @@ public class PlayerVMService extends Thread {
 			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
 			combinedMessage.outputMessages.clear();
 			combinedMessage.inputMessages.clear();
+			metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.NONE, Input.KEYBOARD_INPUT, MetricsService.convertMessage(msg));
+			metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.TRANSITION, Event.ENTER, scriptEngine);
 			int state;
 			while((state = block()) == -2) {}
 			if(state != -2 && state != -1) { return state; }
@@ -306,6 +346,8 @@ public class PlayerVMService extends Thread {
 			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
 			combinedMessage.outputMessages.clear();
 			combinedMessage.inputMessages.clear();
+			metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.NONE, Input.RANDOM, MetricsService.convertMessage(msg));
+			metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.TRANSITION, Event.ENTER, scriptEngine);
 			int state;
 			while((state = block()) == -2) {}
 			if(state != -2 && state != -1) { return state; }
@@ -325,6 +367,8 @@ public class PlayerVMService extends Thread {
 		messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/combinedMessage/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  combinedMessage);
 		combinedMessage.outputMessages.clear();
 		combinedMessage.inputMessages.clear();
+		metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.NONE, Input.TIMER, MetricsService.convertMessage(msg));
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.TRANSITION, Event.ENTER, scriptEngine);
 		Thread.sleep(delay * 1000);
 		block = false;
 		return;
@@ -343,6 +387,8 @@ public class PlayerVMService extends Thread {
 	        public void run() {
 	            timerElapsed = true;
 	        }}, delay * 1000);
+		metricsService.logServerCommunication(gameInstanceService.getGameInstance().getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, DataDirection.SERVER_SEND, Output.NONE, Input.TIMER, MetricsService.convertMessage(msg));
+		metricsService.logServerEvent(gameInstanceService.getGameInstance(), player, Type.TRANSITION, Event.ENTER, scriptEngine);
 	}
 	
 	public Object getGlobalVariableMaster(String variableName) throws ScriptException, InterruptedException {
