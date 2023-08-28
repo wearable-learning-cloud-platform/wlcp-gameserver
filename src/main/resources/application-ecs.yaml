@@ -17,5 +17,6 @@ feign:
         readTimeout: 60000
 wlcp-api-url:
 wlcp-transpiler-url:
+wlcp-metrics-url:
 security:
   jwt-token: ${JWT_TOKEN}
