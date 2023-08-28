@@ -31,49 +31,48 @@ public class MetricsServiceImpl implements MetricsService {
 	
 	@Autowired
 	private MetricsFeignClient metricsFeignClient;
-
 	
 	@Override
 	@Async
-	public void logServerEvent(GameInstance gameInstance, Player player, Type type, Event event, ScriptEngine scriptEngine) {
-		logEvent(gameInstance, player, type, event, scriptEngine);
+	public void logServerEvent(Integer logEventGameInstanceId, Player player, Type type, Event event, ScriptEngine scriptEngine) {
+		logEvent(logEventGameInstanceId, player, type, event, scriptEngine);
 	}
 
 	@Override
 	@Async
-	public void logServerMessage(GameInstance gameInstance, LogEventGamePlayerServerType logEventGamePlayerServerType, String message) {
-		logMessage(gameInstance, logEventGamePlayerServerType, message);
+	public void logServerMessage(Integer logEventGameInstanceId, LogEventGamePlayerServerType logEventGamePlayerServerType, String message) {
+		logMessage(logEventGameInstanceId, logEventGamePlayerServerType, message);
 	}
 
 	@Override
 	@Async
-	public void logServerCommunication(Integer gameInstanceId, int team, int player, DataDirection dataDirection, Output output, Input input, String message) {
-		logCommunication(gameInstanceId, team, player, dataDirection, output, input, message);
+	public void logServerCommunication(Integer logEventGameInstanceId, int team, int player, DataDirection dataDirection, Output output, Input input, String message) {
+		logCommunication(logEventGameInstanceId, team, player, dataDirection, output, input, message);
 	}
 	
-	private void logEvent(GameInstance gameInstance, Player player, Type type, Event event, ScriptEngine scriptEngine) {
+	private void logEvent(Integer logEventGameInstanceId, Player player, Type type, Event event, ScriptEngine scriptEngine) {
 		if(!isEnabled()) { return; }
 		try {
-			metricsFeignClient.logEventGamePlayer(new LogEventGamePlayerServerEventDto(LogEventGamePlayerType.SERVER_EVENT, gameInstance.getGameInstanceId(), player.teamPlayer.team, player.teamPlayer.player, type, event, (int) ((JSObject)scriptEngine.get("FSMGame")).getMember("state"), (int) ((JSObject)scriptEngine.get("FSMGame")).getMember("oldState") - 1, (boolean) ((JSObject)scriptEngine.get("FSMGame")).getMember("running"), (String) scriptEngine.eval(String.format("Object.keys(states)[%d]", (int) ((JSObject)scriptEngine.get("FSMGame")).getMember("state")))));
+			metricsFeignClient.logEventGamePlayer(new LogEventGamePlayerServerEventDto(LogEventGamePlayerType.SERVER_EVENT, logEventGameInstanceId, player.teamPlayer.team, player.teamPlayer.player, type, event, (int) ((JSObject)scriptEngine.get("FSMGame")).getMember("state"), (int) ((JSObject)scriptEngine.get("FSMGame")).getMember("oldState") - 1, (boolean) ((JSObject)scriptEngine.get("FSMGame")).getMember("running"), (String) scriptEngine.eval(String.format("Object.keys(states)[%d]", (int) ((JSObject)scriptEngine.get("FSMGame")).getMember("state")))));
 		} catch (Exception e) {
 			
 		}
 	}
 	
-	private void logMessage(GameInstance gameInstance, LogEventGamePlayerServerType logEventGamePlayerServerType, String message) {
+	private void logMessage(Integer logEventGameInstanceId, LogEventGamePlayerServerType logEventGamePlayerServerType, String message) {
 		if(!isEnabled()) { return; }
 		try {
-			metricsFeignClient.logEventGamePlayer(new LogEventGamePlayerServerMessageDto(LogEventGamePlayerType.SERVER_MESSAGE, gameInstance.getGameInstanceId(), 0, 0, logEventGamePlayerServerType, message));
+			metricsFeignClient.logEventGamePlayer(new LogEventGamePlayerServerMessageDto(LogEventGamePlayerType.SERVER_MESSAGE, logEventGameInstanceId, 0, 0, logEventGamePlayerServerType, message));
 
 		} catch (Exception e) {
 			
 		}
 	}
 	
-	private void logCommunication(Integer gameInstanceId, int team, int player, DataDirection dataDirection, Output output, Input input, String message) {
+	private void logCommunication(Integer logEventGameInstanceId, int team, int player, DataDirection dataDirection, Output output, Input input, String message) {
 		if(!isEnabled()) { return; }
 		try {
-			metricsFeignClient.logEventGamePlayer(new LogEventGamePlayerCommunicationDto(LogEventGamePlayerType.COMMUNICATION, gameInstanceId, team, player, dataDirection, output, input, message));
+			metricsFeignClient.logEventGamePlayer(new LogEventGamePlayerCommunicationDto(LogEventGamePlayerType.COMMUNICATION, logEventGameInstanceId, team, player, dataDirection, output, input, message));
 		} catch (Exception e) {
 			
 		}

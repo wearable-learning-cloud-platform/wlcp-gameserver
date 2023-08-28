@@ -19,9 +19,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public interface MetricsService {
 	
-	void logServerEvent(GameInstance gameInstance, Player player, Type type, Event event, ScriptEngine scriptEngine);
-	void logServerMessage(GameInstance gameInstance, LogEventGamePlayerServerType logEventGamePlayerServerType, String message);
-	void logServerCommunication(Integer gameInstanceId, int team, int player, DataDirection dataDirection, Output output, Input input, String message);
+	void logServerEvent(Integer logEventGameInstanceId, Player player, Type type, Event event, ScriptEngine scriptEngine);
+	void logServerMessage(Integer logEventGameInstanceId, LogEventGamePlayerServerType logEventGamePlayerServerType, String message);
+	void logServerCommunication(Integer logEventGameInstanceId, int team, int player, DataDirection dataDirection, Output output, Input input, String message);
 	StartLoggingGameInstanceDto startLoggingGameInstance(String gameId, String usernameId, boolean debugInstance);
 	void stopLoggingGameInstance(Integer logEventGameInstanceId);
 	boolean isEnabled();

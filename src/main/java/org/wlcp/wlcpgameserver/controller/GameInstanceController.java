@@ -32,7 +32,7 @@ import org.wlcp.wlcpgameserver.dto.messages.IMessage;
 import org.wlcp.wlcpgameserver.dto.messages.PlayerAvaliableMessage;
 import org.wlcp.wlcpgameserver.feignclient.GameFeignClient;
 import org.wlcp.wlcpgameserver.feignclient.UsernameFeignClient;
-import org.wlcp.wlcpgameserver.model.Player;
+import org.wlcp.wlcpgameserver.feignclient.dto.StartLoggingGameInstanceDto;
 import org.wlcp.wlcpgameserver.repository.GameInstanceRepository;
 import org.wlcp.wlcpgameserver.service.impl.GameInstanceService;
 
@@ -217,6 +217,16 @@ public class GameInstanceController {
 			}
 		}
 		return null;
+	}
+	
+	@GetMapping("getStartLoggingGameInstanceDto/{gameInstanceId}")
+	public ResponseEntity<StartLoggingGameInstanceDto> test(@PathVariable int gameInstanceId) {
+		for(GameInstanceService gameInstance : gameInstances) {
+			if(gameInstance.getGameInstance().getGameInstanceId().equals(gameInstanceId)) {
+				return ResponseEntity.status(HttpStatus.OK).body(gameInstance.getStartLoggingGameInstanceDto());
+			}
+		}
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
 	}
 
 }
