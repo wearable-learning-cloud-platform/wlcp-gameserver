@@ -41,10 +41,16 @@ import org.wlcp.wlcpgameserver.dto.messages.SequenceButtonPressMessage;
 import org.wlcp.wlcpgameserver.dto.messages.SingleButtonPressMessage;
 import org.wlcp.wlcpgameserver.feignclient.TranspilerFeignClient;
 import org.wlcp.wlcpgameserver.feignclient.UsernameFeignClient;
+import org.wlcp.wlcpgameserver.feignclient.dto.LogEventGamePlayerCommunicationDto.DataDirection;
+import org.wlcp.wlcpgameserver.feignclient.dto.LogEventGamePlayerCommunicationDto.Input;
+import org.wlcp.wlcpgameserver.feignclient.dto.LogEventGamePlayerCommunicationDto.Output;
+import org.wlcp.wlcpgameserver.feignclient.dto.LogEventGamePlayerServerMessageDto.LogEventGamePlayerServerType;
+import org.wlcp.wlcpgameserver.feignclient.dto.StartLoggingGameInstanceDto;
 import org.wlcp.wlcpgameserver.model.Player;
 import org.wlcp.wlcpgameserver.model.TeamPlayer;
 import org.wlcp.wlcpgameserver.model.UsernameClientData;
 import org.wlcp.wlcpgameserver.repository.GameInstanceRepository;
+import org.wlcp.wlcpgameserver.service.MetricsService;
 
 @Controller
 @RequestMapping("/controllers")
@@ -63,6 +69,9 @@ public class GameInstanceService extends Thread {
 	private TranspilerFeignClient transpilerFeignClient;
 	
 	@Autowired
+	private MetricsService metricsService;
+	
+	@Autowired
 	private GameInstanceController gameInstanceController;
 	
 	@Autowired
@@ -76,6 +85,7 @@ public class GameInstanceService extends Thread {
 	private GameInstance gameInstance;
 	private boolean debugInstance;
 	private boolean archivedGame;
+	private StartLoggingGameInstanceDto startLoggingGameInstanceDto;
 	
 	private String transpiledGame;
 	
@@ -125,6 +135,8 @@ public class GameInstanceService extends Thread {
 		if(debugInstance) { logger.info("Debug Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId); }
 		this.setName("WLCP-" + game.gameId + "-" + gameInstance.getGameInstanceId());
 		transpiledGame = transpilerFeignClient.transpileGame(game.gameId, archivedGame);
+		startLoggingGameInstanceDto = metricsService.startLoggingGameInstance(gameInstance.getGameId(), username.usernameId, debugInstance);
+		metricsService.logServerMessage(startLoggingGameInstanceDto.id, LogEventGamePlayerServerType.GAME_INSTANCE_STARTED, "Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId);
 		masterPlayerVMService = this.StartMasterVM();
 		setupShutdownTimer();
 		done.countDown();
@@ -176,6 +188,7 @@ public class GameInstanceService extends Thread {
 					}
 					//User already exists in the game, maybe they are trying to reconnect?
 					player.playerVM.reconnect();
+					metricsService.logServerMessage(startLoggingGameInstanceDto.id, LogEventGamePlayerServerType.RECONNECT, "Reconnecting " + usernameDto.usernameId);
 					ConnectResponseMessage msg = new ConnectResponseMessage();
 					msg.team = player.teamPlayer.team;
 					msg.player = player.teamPlayer.player;
@@ -210,6 +223,7 @@ public class GameInstanceService extends Thread {
 		
 		//Log the event
 		logger.info("user " + player.usernameClientData.username.usernameId + " joined" + " playing the game" + "\"" + game.gameId + "\"" + " with SessionID: " + "\"" + usernameClientData.sessionId + "\"");
+		metricsService.logServerMessage(startLoggingGameInstanceDto.id, LogEventGamePlayerServerType.CONNECT, "user " + player.usernameClientData.username.usernameId + " joined" + " playing the game" + "\"" + game.gameId + "\"" + " with SessionID: " + "\"" + usernameClientData.sessionId + "\"");
 		
 		gameInstance.getPlayers().add(new GameInstancePlayer(usernameDto.tempPlayer, usernameDto.usernameId, usernameClientData.sessionId, ConnectionStatus.CONNECTED, ConnectionStatus.CONNECTED, GameStatus.GAME_RUNNING));
 		gameInstance = gameInstanceRepository.save(gameInstance);
@@ -236,6 +250,7 @@ public class GameInstanceService extends Thread {
 				
 				//Log the event
 				logger.info("User " + player.usernameClientData.username.usernameId+ " is disconnecting... with SessionID: " + SimpAttributesContextHolder.currentAttributes().getSessionId());
+				metricsService.logServerMessage(startLoggingGameInstanceDto.id, LogEventGamePlayerServerType.DISCONNECT, "User " + player.usernameClientData.username.usernameId+ " is disconnecting... with SessionID: " + SimpAttributesContextHolder.currentAttributes().getSessionId());
 				
 				//Stop the VM's thread
 				player.playerVM.shutdown();
@@ -314,6 +329,8 @@ public class GameInstanceService extends Thread {
 		gameInstance.setGameEnded(true);
 		gameInstanceRepository.delete(gameInstance);	
 		logger.info("Game Instance: " + gameInstance.getGameInstanceId() + " stopped! No longer playing the game: " + game.gameId);
+		metricsService.logServerMessage(startLoggingGameInstanceDto.id, LogEventGamePlayerServerType.GAME_INSTANCE_STOPPED, "Game Instance: " + gameInstance.getGameInstanceId() + " stopped! No longer playing the game: " + game.gameId);
+		metricsService.stopLoggingGameInstance(startLoggingGameInstanceDto.id);
 	}
 	
 	public List<Map<String,String>> getPlayerUserList() {
@@ -341,6 +358,7 @@ public class GameInstanceService extends Thread {
 				}
 			}
 		}
+		metricsService.logServerCommunication(gameInstanceId, team, player, DataDirection.SERVER_RECEIVE, Output.NONE, Input.SINGLE_BUTTON_PRESS, MetricsService.convertMessage(msg));
 		return "";
 	}
 	
@@ -355,6 +373,7 @@ public class GameInstanceService extends Thread {
 				}
 			}
 		}
+		metricsService.logServerCommunication(gameInstanceId, team, player, DataDirection.SERVER_RECEIVE, Output.NONE, Input.SEQUENCE_BUTTON_PRESS, MetricsService.convertMessage(msg));
 		return "";
 	}
 	
@@ -369,6 +388,7 @@ public class GameInstanceService extends Thread {
 				}
 			}
 		}
+		metricsService.logServerCommunication(gameInstanceId, team, player, DataDirection.SERVER_RECEIVE, Output.NONE, Input.KEYBOARD_INPUT, MetricsService.convertMessage(msg));
 		return "";
 	}
 	
@@ -383,6 +403,7 @@ public class GameInstanceService extends Thread {
 				}
 			}
 		}
+		metricsService.logServerCommunication(gameInstanceId, team, player, DataDirection.SERVER_RECEIVE, Output.NONE, Input.RANDOM, MetricsService.convertMessage(msg));
 		return "";
 	}
 	
@@ -414,6 +435,14 @@ public class GameInstanceService extends Thread {
 	
 	public PlayerVMService getMasterPlayerVMService() {
 		return masterPlayerVMService;
+	}
+
+	public StartLoggingGameInstanceDto getStartLoggingGameInstanceDto() {
+		return startLoggingGameInstanceDto;
+	}
+
+	public void setStartLoggingGameInstanceDto(StartLoggingGameInstanceDto startLoggingGameInstanceDto) {
+		this.startLoggingGameInstanceDto = startLoggingGameInstanceDto;
 	}
 
 }
