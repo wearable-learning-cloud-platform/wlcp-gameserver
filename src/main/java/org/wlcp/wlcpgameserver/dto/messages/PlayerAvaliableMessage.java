@@ -10,4 +10,5 @@ public class PlayerAvaliableMessage implements IMessage {
 	public Type type;
 	public int team;
 	public int player;
+	public String playerName;
 }

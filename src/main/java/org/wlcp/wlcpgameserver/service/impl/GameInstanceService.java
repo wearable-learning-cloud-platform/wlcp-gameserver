@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -86,6 +87,7 @@ public class GameInstanceService extends Thread {
 	private boolean debugInstance;
 	private boolean archivedGame;
 	private StartLoggingGameInstanceDto startLoggingGameInstanceDto;
+	private Map<String, String> playerNames;
 	
 	private String transpiledGame;
 	
@@ -102,11 +104,12 @@ public class GameInstanceService extends Thread {
 	private long shutdownDelay = 300000; //5 minutes * 60 seconds * 1000 miliseconds
 	private TimerTask shutdownTimerTask = null;
 	
-	public void setupVariables(GameDto game, UsernameDto username, boolean debugInstance, boolean archivedGame) {
+	public void setupVariables(GameDto game, UsernameDto username, boolean debugInstance, boolean archivedGame, Map<String, String> playerNames) {
 		this.game = game;
 		this.username = username;
 		this.debugInstance = debugInstance;
 		this.archivedGame = archivedGame;
+		this.playerNames = playerNames;
 	}
 	
 	@Override
@@ -293,6 +296,13 @@ public class GameInstanceService extends Thread {
 					PlayerAvaliableMessage msg = new PlayerAvaliableMessage();
 					msg.team = player.teamPlayer.team;
 					msg.player = player.teamPlayer.player;
+					if(playerNames != null) {
+						for(Entry<String, String> entry : playerNames.entrySet()) {
+							if(entry.getKey().equals("Team " + msg.team + " Player " + msg.player)) {
+								msg.playerName = entry.getValue();
+							}
+						}
+					}
 					teamPlayers.add(msg);
 					return teamPlayers;
 				}
@@ -311,6 +321,13 @@ public class GameInstanceService extends Thread {
 					PlayerAvaliableMessage msg = new PlayerAvaliableMessage();
 					msg.team = i;
 					msg.player = n;
+					if(playerNames != null) {
+						for(Entry<String, String> entry : playerNames.entrySet()) {
+							if(entry.getKey().equals("Team " + (msg.team + 1) + " Player " + (msg.player + 1))) {
+								msg.playerName = entry.getValue();
+							}
+						}
+					}
 					teamPlayers.add(msg);
 				}
 			}
@@ -443,6 +460,14 @@ public class GameInstanceService extends Thread {
 
 	public void setStartLoggingGameInstanceDto(StartLoggingGameInstanceDto startLoggingGameInstanceDto) {
 		this.startLoggingGameInstanceDto = startLoggingGameInstanceDto;
+	}
+
+	public Map<String, String> getPlayerNames() {
+		return playerNames;
+	}
+	
+	public boolean hasPlayerNames() {
+		return !getPlayerNames().isEmpty();
 	}
 
 }

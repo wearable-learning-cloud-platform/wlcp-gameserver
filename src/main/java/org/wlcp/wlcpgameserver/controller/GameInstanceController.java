@@ -76,7 +76,7 @@ public class GameInstanceController {
 		UsernameDto usernameDto = usernameFeignClient.getUsername(startGameInstanceDto.usernameId, jwtToken);
 		if(gameDto != null && usernameDto != null) {
 			GameInstanceService service = context.getBean(GameInstanceService.class);
-			service.setupVariables(gameDto, usernameDto, false, false);
+			service.setupVariables(gameDto, usernameDto, false, false, startGameInstanceDto.playerNames);
 			service.start();
 			gameInstances.add(service);
 			service.done.await();
@@ -115,14 +115,14 @@ public class GameInstanceController {
 					}
 				}
 				GameInstanceService service = context.getBean(GameInstanceService.class);
-				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame);
+				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame, null);
 				service.start();
 				gameInstances.add(service);
 				service.done.await();
 				return ResponseEntity.status(HttpStatus.OK).body(service.getGameInstance().getGameInstanceId());
 			} else {
 				GameInstanceService service = context.getBean(GameInstanceService.class);
-				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame);
+				service.setupVariables(gameDto, usernameDto, true, startDebugGameInstance.archivedGame, null);
 				service.start();
 				gameInstances.add(service);
 				service.done.await();
