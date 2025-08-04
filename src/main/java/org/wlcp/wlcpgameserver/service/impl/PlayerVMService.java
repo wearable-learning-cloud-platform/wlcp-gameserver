@@ -43,7 +43,7 @@ import org.wlcp.wlcpgameserver.model.Player;
 import org.wlcp.wlcpgameserver.repository.GameInstanceRepository;
 import org.wlcp.wlcpgameserver.service.MetricsService;
 
-import jdk.nashorn.api.scripting.JSObject;
+import netscape.javascript.JSObject;;
 
 @Controller
 @Scope("prototype")
