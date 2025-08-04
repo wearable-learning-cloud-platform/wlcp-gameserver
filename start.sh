@@ -6,4 +6,4 @@ export ECS_INSTANCE_IP_ADDRESS=$(curl http://169.254.170.2/v2/metadata | jq '.Co
 echo ${ECS_INSTANCE_IP_ADDRESS}
 fi
 
-/usr/bin/java -jar app.jar
+java -jar app.jar

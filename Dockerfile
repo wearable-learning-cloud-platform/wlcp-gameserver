@@ -1,4 +1,4 @@
-FROM openjdk:8-jre-alpine
+FROM eclipse-temurin:17-jre-alpine
 RUN apk add curl jq
 COPY start.sh /start.sh
 RUN chmod +x /start.sh

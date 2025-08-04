@@ -324,8 +324,8 @@ public class GameInstanceService extends Thread {
 			player.playerVM.shutdown();
 		}
 		running = false;
-		gameInstance.setEnd(Timestamp.from(Instant.now()));
-		gameInstance.setDuration(gameInstance.getEnd().getTime() - gameInstance.getStart().getTime());
+		gameInstance.setEndTime(Timestamp.from(Instant.now()));
+		gameInstance.setDuration(gameInstance.getEndTime().getTime() - gameInstance.getStartTime().getTime());
 		gameInstance.setGameEnded(true);
 		gameInstanceRepository.delete(gameInstance);	
 		logger.info("Game Instance: " + gameInstance.getGameInstanceId() + " stopped! No longer playing the game: " + game.gameId);

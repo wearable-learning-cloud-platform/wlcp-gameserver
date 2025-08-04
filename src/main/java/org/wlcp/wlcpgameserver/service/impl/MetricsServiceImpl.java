@@ -22,7 +22,7 @@ import org.wlcp.wlcpgameserver.feignclient.dto.StopLoggingGameInstanceDto;
 import org.wlcp.wlcpgameserver.model.Player;
 import org.wlcp.wlcpgameserver.service.MetricsService;
 
-import jdk.nashorn.api.scripting.JSObject;
+import netscape.javascript.JSObject;
 
 @Service
 public class MetricsServiceImpl implements MetricsService {
