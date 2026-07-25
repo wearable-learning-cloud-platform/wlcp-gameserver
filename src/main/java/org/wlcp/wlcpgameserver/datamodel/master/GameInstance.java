@@ -5,13 +5,13 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.persistence.Column;
-import javax.persistence.ElementCollection;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Formula;
@@ -37,12 +37,12 @@ public class GameInstance implements Serializable {
 	@Column(name = "USERNAME_ID")
 	private String usernameId;
 	
-	@Column(name = "START")
+	@Column(name = "START_TIME")
 	@CreationTimestamp
-	private Timestamp start;
+	private Timestamp startTime;
 	
-	@Column(name = "END")
-	private Timestamp end;
+	@Column(name = "END_TIME")
+	private Timestamp endTime;
 	
 	@Column(name = "DURATION")
 	private Long duration;
@@ -67,12 +67,12 @@ public class GameInstance implements Serializable {
 		this.debugInstance = debugInstance;
 	}
 
-	public Timestamp getEnd() {
-		return end;
+	public Timestamp getEndTime() {
+		return endTime;
 	}
 
-	public void setEnd(Timestamp end) {
-		this.end = end;
+	public void setEndTime(Timestamp endTime) {
+		this.endTime = endTime;
 	}
 
 	public Long getDuration() {
@@ -107,8 +107,8 @@ public class GameInstance implements Serializable {
 		return gameId;
 	}
 
-	public Timestamp getStart() {
-		return start;
+	public Timestamp getStartTime() {
+		return startTime;
 	}
 
 	public Boolean getGameEnded() {
