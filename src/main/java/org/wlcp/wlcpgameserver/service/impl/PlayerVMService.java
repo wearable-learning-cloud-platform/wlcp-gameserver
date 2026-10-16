@@ -74,18 +74,6 @@ public class PlayerVMService extends Thread {
 	private IMessage blockMessage = null;
 	private IMessage lastSentPacket = null;
 	private CombinedMessage combinedMessage = new CombinedMessage();
-
-	// Stage 2 (hardcoded photo check). A keyboard-input transition whose first expected text
-	// starts with this prefix is run as a photo check instead. Syntax per entry:
-	//   "__photo__"                      target class and threshold below
-	//   "__photo__:Triangle"             class Triangle, default threshold
-	//   "__photo__:Triangle:0.9"         class Triangle, threshold 0.9
-	//   ""                               the usual "anything else" branch
-	// Stage 3 replaces this with a real PhotoCheck transition type in the transpiler.
-	public static final String PHOTO_CHECK_HOOK_PREFIX = "__photo__";
-	public static final String PHOTO_CHECK_DEFAULT_MODEL_URL = "https://teachablemachine.withgoogle.com/models/V9QG2NB-d/";
-	public static final String PHOTO_CHECK_DEFAULT_TARGET_CLASS = "Class 1";
-	public static final double PHOTO_CHECK_DEFAULT_THRESHOLD = 0.8;
 	private Semaphore masterGlobalVariableMutex = new Semaphore(1);
 	
 	public void setupVariables(GameInstanceService gameInstanceService, Player player, String transpiledGame) {
@@ -322,9 +310,6 @@ public class PlayerVMService extends Thread {
 	}
 	
 	public int KeyboardInput(String[] keyboardInput, int[] transitions) {
-		if(keyboardInput.length > 0 && keyboardInput[0] != null && keyboardInput[0].startsWith(PHOTO_CHECK_HOOK_PREFIX)) {
-			return PhotoCheckFromKeyboardHook(keyboardInput, transitions);
-		}
 		while(true) {
 			block = true;
 			KeyboardInputMessage msg = new KeyboardInputMessage();
@@ -353,29 +338,6 @@ public class PlayerVMService extends Thread {
 		}
 	}
 	
-	/**
-	 * Translates the stage 2 keyboard-input hook into a PhotoCheck call. See PHOTO_CHECK_HOOK_PREFIX.
-	 */
-	private int PhotoCheckFromKeyboardHook(String[] keyboardInput, int[] transitions) {
-		String[] targetClasses = new String[keyboardInput.length];
-		double[] thresholds = new double[keyboardInput.length];
-		for(int i = 0; i < keyboardInput.length; i++) {
-			String entry = keyboardInput[i] == null ? "" : keyboardInput[i];
-			if(entry.startsWith(PHOTO_CHECK_HOOK_PREFIX)) {
-				String[] parts = entry.split(":", 3);
-				targetClasses[i] = parts.length > 1 && !parts[1].isEmpty() ? parts[1] : PHOTO_CHECK_DEFAULT_TARGET_CLASS;
-				thresholds[i] = PHOTO_CHECK_DEFAULT_THRESHOLD;
-				if(parts.length > 2) {
-					try { thresholds[i] = Double.parseDouble(parts[2]); } catch (NumberFormatException e) { /* keep default */ }
-				}
-			} else {
-				targetClasses[i] = entry;   // "" is the anything-else branch, other text never matches a class
-				thresholds[i] = 0;
-			}
-		}
-		return PhotoCheck(PHOTO_CHECK_DEFAULT_MODEL_URL, targetClasses, thresholds, transitions);
-	}
-
 	/**
 	 * Photo check transition. Asks the phone to take a photo and score it with the Teachable Machine
 	 * model at modelUrl, then picks the next state from the scores. Mirrors KeyboardInput: send the
