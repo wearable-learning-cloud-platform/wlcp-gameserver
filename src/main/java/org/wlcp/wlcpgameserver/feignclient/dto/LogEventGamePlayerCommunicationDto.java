@@ -23,7 +23,8 @@ public class LogEventGamePlayerCommunicationDto extends LogEventGamePlayerDto {
 		SEQUENCE_BUTTON_PRESS,
 	    KEYBOARD_INPUT,
 	    TIMER,
-	    RANDOM
+	    RANDOM,
+	    PHOTO_CHECK
 	}
 	
 	public DataDirection dataDirection;

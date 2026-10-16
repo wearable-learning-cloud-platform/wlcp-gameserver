@@ -36,6 +36,7 @@ import org.wlcp.wlcpgameserver.dto.messages.ConnectResponseMessage.Code;
 import org.wlcp.wlcpgameserver.dto.messages.EmptyMessage;
 import org.wlcp.wlcpgameserver.dto.messages.IMessage;
 import org.wlcp.wlcpgameserver.dto.messages.KeyboardInputMessage;
+import org.wlcp.wlcpgameserver.dto.messages.PhotoCheckMessage;
 import org.wlcp.wlcpgameserver.dto.messages.PlayerAvaliableMessage;
 import org.wlcp.wlcpgameserver.dto.messages.SequenceButtonPressMessage;
 import org.wlcp.wlcpgameserver.dto.messages.SingleButtonPressMessage;
@@ -389,6 +390,21 @@ public class GameInstanceService extends Thread {
 			}
 		}
 		metricsService.logServerCommunication(gameInstanceId, team, player, DataDirection.SERVER_RECEIVE, Output.NONE, Input.KEYBOARD_INPUT, MetricsService.convertMessage(msg));
+		return "";
+	}
+	
+	@MessageMapping("/gameInstance/{gameInstanceId}/photoCheck/{usernameId}/{team}/{player}")
+	public String photoCheck(@DestinationVariable int gameInstanceId, @DestinationVariable String usernameId, @DestinationVariable int team, @DestinationVariable int player, @RequestBody PhotoCheckMessage msg) {
+		for(GameInstanceService gameInstance : gameInstanceController.gameInstances) {
+			if(gameInstance.getGameInstance().getGameInstanceId().equals(gameInstanceId)) {
+				for(Player p : gameInstance.players) {
+					if(p.teamPlayer.team == team && p.teamPlayer.player == player) {
+						p.playerVM.unblock(msg);
+					}
+				}
+			}
+		}
+		metricsService.logServerCommunication(gameInstanceId, team, player, DataDirection.SERVER_RECEIVE, Output.NONE, Input.PHOTO_CHECK, MetricsService.convertMessage(msg));
 		return "";
 	}
 	
