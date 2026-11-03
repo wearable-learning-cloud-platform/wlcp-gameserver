@@ -344,15 +344,20 @@ public class PlayerVMService extends Thread {
 	 * request, block until the phone replies with a PhotoCheckMessage, compare, return a state.
 	 *
 	 * targetClasses[i] with thresholds[i] selects transitions[i] when scores[class] >= threshold
-	 * (class names compared ignoring case). An empty targetClass is the "anything else" branch and
-	 * also catches replies that carry an error instead of scores. If nothing matches the request is
-	 * sent again, like KeyboardInput.
+	 * (class names compared ignoring case). An empty targetClass is the "anything else" branch. If
+	 * nothing matches the request is sent again, like KeyboardInput. A reply that carries an error
+	 * says nothing about the photo, so it never takes a branch: the request is sent again and the
+	 * player stays on this check.
 	 */
 	public int PhotoCheck(String modelUrl, String[] targetClasses, double[] thresholds, int[] transitions) {
+		boolean retry = false;
 		while(true) {
 			block = true;
 			PhotoCheckMessage msg = new PhotoCheckMessage();
 			msg.modelUrl = modelUrl;
+			msg.targetClasses = targetClasses;
+			msg.thresholds = thresholds;
+			msg.retry = retry;
 			lastSentPacket = msg;
 			messageTemplate.convertAndSend("/subscription/gameInstance/" + gameInstanceService.getGameInstance().getGameInstanceId() + "/photoCheckRequest/" + player.usernameClientData.username.usernameId + "/" + player.teamPlayer.team + "/" + player.teamPlayer.player,  msg);
 			combinedMessage.inputMessages.add(new InputMessage(MessageType.PHOTO_CHECK, msg));
@@ -365,25 +370,27 @@ public class PlayerVMService extends Thread {
 			while((state = block()) == -2) {}
 			if(state != -2 && state != -1) { return state; }
 			msg = (PhotoCheckMessage) blockMessage;
-			if(msg.error != null) {
+			if(msg.error != null || msg.scores == null) {
 				logger.info("PhotoCheck for " + player.usernameClientData.username.usernameId + " failed on the phone: " + msg.error);
-			} else if(msg.scores != null) {
-				for(int i = 0; i < targetClasses.length; i++) {
-					if(targetClasses[i] == null || targetClasses[i].isEmpty()) { continue; }
-					for(Map.Entry<String, Double> score : msg.scores.entrySet()) {
-						if(score.getKey() != null && score.getKey().equalsIgnoreCase(targetClasses[i]) && score.getValue() != null && score.getValue() >= thresholds[i]) {
-							logger.info("PhotoCheck for " + player.usernameClientData.username.usernameId + " matched " + score.getKey() + " at " + score.getValue() + " (threshold " + thresholds[i] + ")");
-							return transitions[i];
-						}
+				retry = false;
+				continue;
+			}
+			for(int i = 0; i < targetClasses.length; i++) {
+				if(targetClasses[i] == null || targetClasses[i].isEmpty()) { continue; }
+				for(Map.Entry<String, Double> score : msg.scores.entrySet()) {
+					if(score.getKey() != null && score.getKey().equalsIgnoreCase(targetClasses[i]) && score.getValue() != null && score.getValue() >= thresholds[i]) {
+						logger.info("PhotoCheck for " + player.usernameClientData.username.usernameId + " matched " + score.getKey() + " at " + score.getValue() + " (threshold " + thresholds[i] + ")");
+						return transitions[i];
 					}
 				}
-				logger.info("PhotoCheck for " + player.usernameClientData.username.usernameId + " matched nothing. Scores: " + msg.scores);
 			}
+			logger.info("PhotoCheck for " + player.usernameClientData.username.usernameId + " matched nothing. Scores: " + msg.scores);
 			for(int i = 0; i < targetClasses.length; i++) {
 				if(targetClasses[i] != null && targetClasses[i].isEmpty()) {
 					return transitions[i];
 				}
 			}
+			retry = true;
 		}
 	}
 
