@@ -138,7 +138,7 @@ public class GameInstanceService extends Thread {
 		startLoggingGameInstanceDto = metricsService.startLoggingGameInstance(gameInstance.getGameId(), username.usernameId, debugInstance);
 		metricsService.logServerMessage(startLoggingGameInstanceDto.id, LogEventGamePlayerServerType.GAME_INSTANCE_STARTED, "Game Instance: " + gameInstance.getGameInstanceId() + " started! Playing the game: " + game.gameId);
 		masterPlayerVMService = this.StartMasterVM();
-		setupShutdownTimer();
+		//setupShutdownTimer();
 		done.countDown();
 	}
 	
