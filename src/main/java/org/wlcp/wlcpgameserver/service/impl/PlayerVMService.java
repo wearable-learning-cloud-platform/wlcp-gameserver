@@ -73,6 +73,7 @@ public class PlayerVMService extends Thread {
 	private IMessage lastSentPacket = null;
 	private CombinedMessage combinedMessage = new CombinedMessage();
 	private Semaphore masterGlobalVariableMutex = new Semaphore(1);
+	private final Random random = new Random();
 	
 	public void setupVariables(GameInstanceService gameInstanceService, Player player, String transpiledGame) {
 		this.gameInstanceService = gameInstanceService;
@@ -352,8 +353,7 @@ public class PlayerVMService extends Thread {
 			while((state = block()) == -2) {}
 			if(state != -2 && state != -1) { return state; }
 			msg = (EmptyMessage) blockMessage;
-			Random random = new Random(System.currentTimeMillis());
-			return randomStates[random.nextInt(randomStates.length - 1)];
+			return randomStates[random.nextInt(randomStates.length)];
 		}
 	}
 	
@@ -412,13 +412,22 @@ public class PlayerVMService extends Thread {
 	public Object setGlobalVariable(String expression) throws ScriptException, InterruptedException {
 		return gameInstanceService.getMasterPlayerVMService().setGlobalVariableMaster(expression);
 	}
-	
+
 	private int gotoSameState() {
 		try {
 			scriptEngine.eval("FSMGame.state = FSMGame.oldState");
+
+			Object state = scriptEngine.eval("FSMGame.state");
+
+			if (state instanceof Number) {
+				return ((Number) state).intValue();
+			}
+
+			throw new IllegalStateException(
+				"FSMGame.state is not a number: " + state
+			);
 		} catch (ScriptException e) {
-			e.printStackTrace();
+			throw new RuntimeException("Unable to get FSMGame.state", e);
 		}
-		return (int) ((JSObject)scriptEngine.get("FSMGame")).getMember("state");
 	}
 }
